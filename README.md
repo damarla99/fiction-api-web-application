@@ -18,6 +18,7 @@ A full-stack containerized web application demonstrating modern DevOps practices
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Architecture](#-architecture)
+- [CI/CD Pipeline](#-cicd-pipeline)
 - [Prerequisites](#-prerequisites)
 - [Quick Start](#-quick-start)
   - [Local Development](#local-development)
@@ -196,6 +197,68 @@ EKS Worker Nodes (Private Subnet) → NAT Gateway (Public Subnet)
 - ✅ Password Hashing (bcrypt)
 - ✅ Input Validation (Pydantic)
 - ✅ Kubernetes Secrets for credentials
+
+---
+
+## 🔄 CI/CD Pipeline
+
+Automated deployment pipeline using GitHub Actions.
+
+### 🚀 Features
+
+- ✅ **Automatic Deployment** - Push to `main` triggers full deployment
+- ✅ **Code Validation** - Automated linting and formatting checks
+- ✅ **Docker Build** - Automatic image build and push to ECR
+- ✅ **Infrastructure Deploy** - Terraform provisions AWS resources
+- ✅ **Kubernetes Deploy** - Automated kubectl deployment
+- ✅ **Manual Approval** - Required approval for destroy operations
+- ✅ **Complete Cleanup** - Destroys all resources to avoid costs
+
+### 📊 Deployment Flow
+
+```mermaid
+graph LR
+    A[Push to main] --> B[Validate Code]
+    B --> C[Build Docker]
+    C --> D[Deploy Infrastructure]
+    D --> E[Deploy Kubernetes]
+    E --> F[Get API URL]
+    F --> G[🎉 Live!]
+    
+    H[Manual Trigger] --> I[Approval Required]
+    I --> J[Destroy K8s]
+    J --> K[Destroy Infra]
+    K --> L[Cleanup ECR]
+    L --> M[✅ Deleted]
+```
+
+### 🔐 Setup GitHub Secrets
+
+Add these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|--------|-------|
+| `AWS_ACCESS_KEY_ID` | Your AWS access key |
+| `AWS_SECRET_ACCESS_KEY` | Your AWS secret key |
+
+### 🎯 Usage
+
+**Deploy:**
+```bash
+git add .
+git commit -m "Deploy feature"
+git push origin main
+# Automatic deployment starts!
+```
+
+**Destroy (Save costs):**
+1. Go to GitHub Actions tab
+2. Run "Deploy to AWS EKS" workflow
+3. Select action: `destroy`
+4. Approve the destruction
+5. All resources deleted ✅
+
+**View Details:** See [.github/workflows/README.md](.github/workflows/README.md)
 
 ---
 
@@ -519,7 +582,7 @@ curl http://$API_URL/health
 
 **📖 Next Steps:**
 - See [Testing](#-testing) section for how to test all endpoints
-- Visit `http://<your-url>/api/docs` for interactive Swagger UI
+- Visit `http://<LOAD_BALANCER_URL>/api/docs` for interactive Swagger UI
 - Check [Monitoring](#-monitoring--operations) for logs and status
 
 **💰 Important:** Remember to run `terraform destroy` when done to avoid AWS charges!
@@ -566,8 +629,8 @@ aws dynamodb delete-table \
 ### Interactive Documentation
 
 When the API is running, visit:
-- **Swagger UI:** http://localhost:3000/api/docs (local) or http://<load-balancer-url>/api/docs (AWS)
-- **ReDoc:** http://localhost:3000/api/redoc (local) or http://<load-balancer-url>/api/redoc (AWS)
+- **Swagger UI:** `http://localhost:3000/api/docs` (local) or `http://<LOAD_BALANCER_URL>/api/docs` (AWS)
+- **ReDoc:** `http://localhost:3000/api/redoc` (local) or `http://<LOAD_BALANCER_URL>/api/redoc` (AWS)
 
 ### Example Usage
 
