@@ -32,7 +32,7 @@ module "eks" {
   # EKS Managed Node Group
   eks_managed_node_groups = {
     main = {
-      name = "${var.project_name}-node-group"
+      name = "main"
 
       instance_types = var.node_instance_types
       capacity_type  = "ON_DEMAND"
@@ -62,23 +62,5 @@ module "eks" {
   enable_irsa = true
 
   tags = var.tags
-}
-
-# OIDC Provider for IRSA
-data "tls_certificate" "cluster" {
-  url = module.eks.cluster_oidc_issuer_url
-}
-
-resource "aws_iam_openid_connect_provider" "cluster" {
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.cluster.certificates[0].sha1_fingerprint]
-  url             = module.eks.cluster_oidc_issuer_url
-
-  tags = merge(
-    var.tags,
-    {
-      Name = "${var.project_name}-eks-oidc"
-    }
-  )
 }
 
