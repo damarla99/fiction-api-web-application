@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: fictions-app
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - mongodb.yaml
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+
+# Optional: Add labels to all resources
+commonLabels:
+  app.kubernetes.io/name: fictions-api
+  app.kubernetes.io/component: backend
+  app.kubernetes.io/part-of: fictions-platform
+
+# Optional: Add annotations
+commonAnnotations:
+  managed-by: kubectl
+

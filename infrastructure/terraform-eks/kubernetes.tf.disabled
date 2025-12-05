@@ -1,0 +1,317 @@
+# Kubernetes Namespace
+resource "kubernetes_namespace" "app" {
+  metadata {
+    name = "fictions-app"
+    
+    labels = {
+      name        = "fictions-app"
+      environment = var.environment
+    }
+  }
+
+  depends_on = [module.eks]
+}
+
+# ConfigMap for application configuration
+resource "kubernetes_config_map" "app_config" {
+  metadata {
+    name      = "fictions-api-config"
+    namespace = kubernetes_namespace.app.metadata[0].name
+  }
+
+  data = {
+    NODE_ENV                  = var.environment
+    PORT                      = "3000"
+    RATE_LIMIT_WINDOW_MS      = "900000"
+    RATE_LIMIT_MAX_REQUESTS   = "100"
+  }
+
+  depends_on = [module.eks]
+}
+
+# MongoDB StatefulSet
+resource "kubernetes_stateful_set" "mongodb" {
+  metadata {
+    name      = "mongodb"
+    namespace = kubernetes_namespace.app.metadata[0].name
+  }
+
+  spec {
+    service_name = "mongodb-service"
+    replicas     = 1
+
+    selector {
+      match_labels = {
+        app = "mongodb"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "mongodb"
+        }
+      }
+
+      spec {
+        container {
+          name  = "mongodb"
+          image = "mongo:7.0"
+
+          port {
+            container_port = 27017
+            name           = "mongodb"
+          }
+
+          env {
+            name  = "MONGO_INITDB_DATABASE"
+            value = "fictions_db"
+          }
+
+          volume_mount {
+            name       = "mongodb-storage"
+            mount_path = "/data/db"
+          }
+
+          resources {
+            requests = {
+              memory = "256Mi"
+              cpu    = "100m"
+            }
+            limits = {
+              memory = "512Mi"
+              cpu    = "200m"
+            }
+          }
+        }
+      }
+    }
+
+    volume_claim_template {
+      metadata {
+        name = "mongodb-storage"
+      }
+
+      spec {
+        access_modes       = ["ReadWriteOnce"]
+        storage_class_name = "gp3"
+
+        resources {
+          requests = {
+            storage = "10Gi"
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [module.eks]
+}
+
+# MongoDB Service
+resource "kubernetes_service" "mongodb" {
+  metadata {
+    name      = "mongodb-service"
+    namespace = kubernetes_namespace.app.metadata[0].name
+  }
+
+  spec {
+    cluster_ip = "None"
+
+    selector = {
+      app = "mongodb"
+    }
+
+    port {
+      port        = 27017
+      target_port = 27017
+    }
+  }
+
+  depends_on = [module.eks]
+}
+
+# Application Deployment
+resource "kubernetes_deployment" "app" {
+  metadata {
+    name      = "fictions-api"
+    namespace = kubernetes_namespace.app.metadata[0].name
+
+    labels = {
+      app = "fictions-api"
+    }
+  }
+
+  spec {
+    replicas = var.app_replicas
+
+    selector {
+      match_labels = {
+        app = "fictions-api"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "fictions-api"
+        }
+      }
+
+      spec {
+        container {
+          name  = "fictions-api"
+          image = "${aws_ecr_repository.main.repository_url}:${var.container_image_tag}"
+
+          port {
+            container_port = 3000
+            name           = "http"
+          }
+
+          env_from {
+            config_map_ref {
+              name = kubernetes_config_map.app_config.metadata[0].name
+            }
+          }
+
+          env {
+            name = "JWT_SECRET"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.app_secrets.metadata[0].name
+                key  = "JWT_SECRET"
+              }
+            }
+          }
+
+          env {
+            name = "MONGODB_URI"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.app_secrets.metadata[0].name
+                key  = "MONGODB_URI"
+              }
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/health"
+              port = 3000
+            }
+            initial_delay_seconds = 30
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/health"
+              port = 3000
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 5
+            timeout_seconds       = 3
+            failure_threshold     = 3
+          }
+
+          resources {
+            requests = {
+              memory = "128Mi"
+              cpu    = "100m"
+            }
+            limits = {
+              memory = "256Mi"
+              cpu    = "200m"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    module.eks,
+    kubernetes_stateful_set.mongodb
+  ]
+}
+
+# Application Service
+resource "kubernetes_service" "app" {
+  metadata {
+    name      = "fictions-api-service"
+    namespace = kubernetes_namespace.app.metadata[0].name
+
+    annotations = {
+      "service.beta.kubernetes.io/aws-load-balancer-type" = "nlb"
+    }
+  }
+
+  spec {
+    type = "LoadBalancer"
+
+    selector = {
+      app = "fictions-api"
+    }
+
+    port {
+      protocol    = "TCP"
+      port        = 80
+      target_port = 3000
+      name        = "http"
+    }
+  }
+
+  depends_on = [
+    module.eks,
+    helm_release.aws_load_balancer_controller
+  ]
+}
+
+# Horizontal Pod Autoscaler
+resource "kubernetes_horizontal_pod_autoscaler_v2" "app" {
+  metadata {
+    name      = "fictions-api-hpa"
+    namespace = kubernetes_namespace.app.metadata[0].name
+  }
+
+  spec {
+    scale_target_ref {
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = kubernetes_deployment.app.metadata[0].name
+    }
+
+    min_replicas = var.app_min_replicas
+    max_replicas = var.app_max_replicas
+
+    metric {
+      type = "Resource"
+      resource {
+        name = "cpu"
+        target {
+          type                = "Utilization"
+          average_utilization = 70
+        }
+      }
+    }
+
+    metric {
+      type = "Resource"
+      resource {
+        name = "memory"
+        target {
+          type                = "Utilization"
+          average_utilization = 80
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    module.eks,
+    helm_release.metrics_server
+  ]
+}
+
