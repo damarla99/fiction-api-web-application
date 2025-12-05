@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 class Database:
     """MongoDB database connection manager"""
-    
+
     client: AsyncIOMotorClient = None
-    
+
     @classmethod
     async def connect_db(cls):
         """Connect to MongoDB"""
@@ -26,21 +26,21 @@ class Database:
         except ConnectionFailure as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
             raise
-    
+
     @classmethod
     async def close_db(cls):
         """Close MongoDB connection"""
         if cls.client:
             cls.client.close()
             logger.info("Closed MongoDB connection")
-    
+
     @classmethod
     def get_database(cls):
         """Get database instance"""
         if not cls.client:
             raise Exception("Database not connected")
         return cls.client[settings.db_name]
-    
+
     @classmethod
     def get_collection(cls, name: str):
         """Get collection from database"""
@@ -62,4 +62,3 @@ def get_users_collection():
 def get_fictions_collection():
     """Get fictions collection"""
     return Database.get_collection("fictions")
-

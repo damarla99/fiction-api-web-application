@@ -14,11 +14,11 @@ class FictionBase(BaseModel):
     genre: str = Field(..., min_length=1, max_length=50)
     description: str = Field(..., max_length=500)
     content: str = Field(..., min_length=1)
-    
+
     @field_validator('genre')
     @classmethod
     def genre_valid(cls, v):
-        valid_genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller', 
+        valid_genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller',
                        'horror', 'adventure', 'drama', 'comedy', 'other']
         if v.lower() not in valid_genres:
             raise ValueError(f'Genre must be one of: {", ".join(valid_genres)}')
@@ -37,13 +37,13 @@ class FictionUpdate(BaseModel):
     genre: Optional[str] = Field(None, min_length=1, max_length=50)
     description: Optional[str] = Field(None, max_length=500)
     content: Optional[str] = Field(None, min_length=1)
-    
+
     @field_validator('genre')
     @classmethod
     def genre_valid(cls, v):
         if v is None:
             return v
-        valid_genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller', 
+        valid_genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller',
                        'horror', 'adventure', 'drama', 'comedy', 'other']
         if v.lower() not in valid_genres:
             raise ValueError(f'Genre must be one of: {", ".join(valid_genres)}')
@@ -56,7 +56,7 @@ class Fiction(FictionBase):
     created_by: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         populate_by_name = True
         json_encoders = {ObjectId: str}
@@ -85,7 +85,6 @@ class FictionResponse(BaseModel):
     created_by: str
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         populate_by_name = True
-

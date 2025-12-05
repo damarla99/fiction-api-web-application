@@ -19,11 +19,11 @@ limiter = Limiter(
 def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Response:
     """
     Custom handler for rate limit exceeded errors
-    
+
     Args:
         request: FastAPI request
         exc: RateLimitExceeded exception
-    
+
     Returns:
         JSON response with error message
     """
@@ -35,4 +35,3 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Res
             "detail": str(exc.detail)
         }
     )
-

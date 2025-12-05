@@ -4,7 +4,7 @@ This directory contains automated CI/CD pipelines for the Fictions API project.
 
 ## 📋 Workflows
 
-### 1. `deploy.yml` - Main Deployment Pipeline
+### 1. `ci.yml` - CI/CD Pipeline
 
 **Triggers:**
 - Push to `main` branch (automatic)
@@ -21,6 +21,8 @@ This directory contains automated CI/CD pipelines for the Fictions API project.
 2. **Build** - Docker image creation
    - Build Docker image
    - Tag with timestamp and commit SHA
+   - **Trivy security scan** (CRITICAL/HIGH vulnerabilities)
+   - Upload scan results to GitHub Security
    - Push to Amazon ECR
    - Tag as `:latest`
 
@@ -57,11 +59,10 @@ This directory contains automated CI/CD pipelines for the Fictions API project.
 
 ---
 
-### 2. `test.yml` - Test and Lint Pipeline
+### 2. `pr.yml` - PR Quality Check Pipeline
 
 **Triggers:**
 - Pull requests to `main`
-- Push to `develop` branch
 
 **Jobs:**
 
@@ -76,7 +77,73 @@ This directory contains automated CI/CD pipelines for the Fictions API project.
 
 3. **Docker**
    - Test Docker image builds
+   - **Trivy vulnerability scanning** (fails on CRITICAL/HIGH)
+   - Upload security scan results
    - Verify image integrity
+
+---
+
+## 🛡️ Security Scanning with Trivy
+
+Both workflows include **Trivy** container image scanning for security vulnerabilities.
+
+### What is Trivy?
+
+Trivy is a comprehensive security scanner that detects:
+- **OS vulnerabilities** (Alpine, Debian, Ubuntu, etc.)
+- **Language-specific vulnerabilities** (Python packages, Node.js, etc.)
+- **Misconfigurations**
+- **Secrets in the image**
+
+### Scanning Behavior
+
+**In `ci.yml` (Production):**
+- Scans for CRITICAL and HIGH severity vulnerabilities
+- **Does NOT fail the build** (exit-code: 0)
+- Reports findings but allows deployment
+- Uploads results to GitHub Security tab
+
+**In `pr.yml` (Pull Requests):**
+- Scans for CRITICAL and HIGH severity vulnerabilities
+- **FAILS the build** if found (exit-code: 1)
+- Prevents merging vulnerable code
+- Uploads results to GitHub Security tab
+
+### Viewing Scan Results
+
+**Option 1: GitHub Security Tab**
+1. Go to your repository
+2. Click **Security** → **Code scanning**
+3. View Trivy findings with details and remediation
+
+**Option 2: Workflow Logs**
+1. Go to **Actions** tab
+2. Click on the workflow run
+3. Expand the "Run Trivy vulnerability scanner" step
+4. View table format results
+
+### Example Output
+
+```
+fictions-api:test (alpine 3.19)
+===================================
+Total: 2 (CRITICAL: 1, HIGH: 1)
+
+┌───────────────┬──────────────┬──────────┬───────────────────┬───────────────────┬────────────────────────────────┐
+│   Library     │ Vulnerability│ Severity │ Installed Version │ Fixed Version     │ Title                          │
+├───────────────┼──────────────┼──────────┼───────────────────┼───────────────────┼────────────────────────────────┤
+│ libssl3       │ CVE-2024-1234│ CRITICAL │ 3.1.4-r0          │ 3.1.4-r1          │ openssl: critical vulnerability│
+│ libcrypto3    │ CVE-2024-5678│ HIGH     │ 3.1.4-r0          │ 3.1.4-r1          │ openssl: high severity issue   │
+└───────────────┴──────────────┴──────────┴───────────────────┴───────────────────┴────────────────────────────────┘
+```
+
+### Remediation
+
+When vulnerabilities are found:
+1. Check if a newer base image is available
+2. Update package versions in `requirements.txt`
+3. Rebuild the Docker image
+4. Re-run the scan
 
 ---
 
@@ -121,7 +188,7 @@ git push origin main
 
 **Manual Deployment:**
 1. Go to GitHub Actions tab
-2. Select "Deploy to AWS EKS" workflow
+2. Select "CI/CD Pipeline" workflow
 3. Click "Run workflow"
 4. Select branch: `main`
 5. Action: `deploy`
@@ -132,7 +199,7 @@ git push origin main
 **⚠️ Warning: This will delete ALL resources and data!**
 
 1. Go to GitHub Actions tab
-2. Select "Deploy to AWS EKS" workflow
+2. Select "CI/CD Pipeline" workflow
 3. Click "Run workflow"
 4. Select branch: `main`
 5. Action: `destroy`
@@ -156,7 +223,18 @@ git push origin main
        │
        ▼
 ┌─────────────┐
-│    Build    │ ◄── Docker build & push to ECR
+│    Build    │ ◄── Docker build
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│    Trivy    │ ◄── 🛡️ Security scan (CRITICAL/HIGH)
+│    Scan     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│Push to ECR  │ ◄── Push Docker image
 └──────┬──────┘
        │
        ▼
@@ -241,7 +319,7 @@ Edit `infrastructure/terraform-eks/variables.tf` or pass via workflow:
 
 ### Change Deployment Region
 
-Update in `.github/workflows/deploy.yml`:
+Update in `.github/workflows/ci.yml`:
 
 ```yaml
 env:

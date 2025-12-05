@@ -12,7 +12,7 @@ class PyObjectId(ObjectId):
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
-    
+
     @classmethod
     def validate(cls, v):
         if not ObjectId.is_valid(v):
@@ -24,7 +24,7 @@ class UserBase(BaseModel):
     """Base user schema"""
     username: str = Field(..., min_length=3, max_length=30)
     email: EmailStr
-    
+
     @field_validator('username')
     @classmethod
     def username_alphanumeric(cls, v):
@@ -36,7 +36,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for user registration"""
     password: str = Field(..., min_length=6, max_length=100)
-    
+
     @field_validator('password')
     @classmethod
     def password_strength(cls, v):
@@ -56,7 +56,7 @@ class User(UserBase):
     id: str = Field(default_factory=lambda: str(ObjectId()), alias="_id")
     password_hash: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         populate_by_name = True
         json_encoders = {ObjectId: str}
@@ -75,7 +75,7 @@ class UserResponse(BaseModel):
     username: str
     email: EmailStr
     created_at: datetime
-    
+
     class Config:
         populate_by_name = True
 
@@ -90,4 +90,3 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """JWT token payload data"""
     user_id: Optional[str] = None
-
