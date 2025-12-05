@@ -19,7 +19,7 @@ class FictionBase(BaseModel):
     @classmethod
     def genre_valid(cls, v):
         valid_genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller',
-                       'horror', 'adventure', 'drama', 'comedy', 'other']
+                        'horror', 'adventure', 'drama', 'comedy', 'other']
         if v.lower() not in valid_genres:
             raise ValueError(f'Genre must be one of: {", ".join(valid_genres)}')
         return v.lower()
@@ -44,7 +44,7 @@ class FictionUpdate(BaseModel):
         if v is None:
             return v
         valid_genres = ['fantasy', 'sci-fi', 'mystery', 'romance', 'thriller',
-                       'horror', 'adventure', 'drama', 'comedy', 'other']
+                        'horror', 'adventure', 'drama', 'comedy', 'other']
         if v.lower() not in valid_genres:
             raise ValueError(f'Genre must be one of: {", ".join(valid_genres)}')
         return v.lower()

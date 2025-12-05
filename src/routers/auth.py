@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status, Request
 from datetime import timedelta, datetime
 from bson import ObjectId
 
-from ..models.user import UserCreate, UserLogin, Token, UserResponse, User
+from ..models.user import UserCreate, UserLogin, Token, UserResponse
 from ..config.database import get_users_collection
 from ..config.settings import settings
 from ..utils.password import hash_password, verify_password
