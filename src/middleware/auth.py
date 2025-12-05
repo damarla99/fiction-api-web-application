@@ -1,6 +1,7 @@
 """
 Authentication middleware and utilities
 """
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
@@ -35,16 +36,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode.update({"exp": expire, "iat": datetime.utcnow()})
 
     encoded_jwt = jwt.encode(
-        to_encode,
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm
+        to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm
     )
 
     return encoded_jwt
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
     """
     Validate JWT token and return user data
@@ -68,7 +67,7 @@ async def get_current_user(
         payload = jwt.decode(
             credentials.credentials,
             settings.jwt_secret,
-            algorithms=[settings.jwt_algorithm]
+            algorithms=[settings.jwt_algorithm],
         )
 
         user_id: str = payload.get("sub")
@@ -96,9 +95,7 @@ def verify_token(token: str) -> Optional[str]:
     """
     try:
         payload = jwt.decode(
-            token,
-            settings.jwt_secret,
-            algorithms=[settings.jwt_algorithm]
+            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
         )
         return payload.get("sub")
     except JWTError:

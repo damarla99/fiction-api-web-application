@@ -1,6 +1,7 @@
 """
 Database connection and configuration
 """
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ConnectionFailure
 import logging
@@ -21,7 +22,7 @@ class Database:
         try:
             cls.client = AsyncIOMotorClient(settings.mongodb_uri)
             # Verify connection
-            await cls.client.admin.command('ping')
+            await cls.client.admin.command("ping")
             logger.info(f"Connected to MongoDB at {settings.mongodb_uri}")
         except ConnectionFailure as e:
             logger.error(f"Failed to connect to MongoDB: {e}")

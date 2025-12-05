@@ -1,6 +1,7 @@
 """
 Main FastAPI application
 """
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,7 +18,7 @@ from .middleware.rate_limiter import limiter, rate_limit_exceeded_handler
 # Configure logging
 logging.basicConfig(
     level=logging.INFO if not settings.debug else logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
 )
 
 # Add rate limiter state
@@ -84,7 +85,7 @@ async def health_check():
         "status": "ok",
         "app": settings.app_name,
         "version": settings.app_version,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
@@ -101,22 +102,14 @@ async def root():
         "message": f"Welcome to {settings.app_name}",
         "version": settings.app_version,
         "docs": "/api/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
 # Include routers
-app.include_router(
-    auth.router,
-    prefix="/api/auth",
-    tags=["Authentication"]
-)
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 
-app.include_router(
-    fictions.router,
-    prefix="/api/fictions",
-    tags=["Fictions"]
-)
+app.include_router(fictions.router, prefix="/api/fictions", tags=["Fictions"])
 
 
 # Global exception handler
@@ -139,17 +132,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "Internal Server Error",
             "message": "An unexpected error occurred",
-            "detail": str(exc) if settings.debug else "Please contact support"
-        }
+            "detail": str(exc) if settings.debug else "Please contact support",
+        },
     )
 
 
 # Run application (for development)
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=settings.port,
-        reload=settings.debug
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.port, reload=settings.debug)
