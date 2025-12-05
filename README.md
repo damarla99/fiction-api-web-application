@@ -311,8 +311,8 @@ docker-compose ps
 
 Open your browser to:
 - **🌐 API:** http://localhost:3000
-- **📖 Swagger UI (Interactive Docs):** http://localhost:3000/docs
-- **📚 ReDoc (Alternative Docs):** http://localhost:3000/redoc
+- **📖 Swagger UI (Interactive Docs):** http://localhost:3000/api/docs
+- **📚 ReDoc (Alternative Docs):** http://localhost:3000/api/redoc
 
 **📖 Next:** See [Testing](#-testing) section for detailed testing instructions.
 
@@ -328,8 +328,8 @@ Open your browser to:
 | Service | URL |
 |---------|-----|
 | API Base | http://localhost:3000 |
-| Swagger UI | http://localhost:3000/docs |
-| ReDoc | http://localhost:3000/redoc |
+| Swagger UI | http://localhost:3000/api/docs |
+| ReDoc | http://localhost:3000/api/redoc |
 | Health Check | http://localhost:3000/health |
 | MongoDB | localhost:27017 |
 
@@ -508,7 +508,7 @@ export API_URL=$(kubectl get svc fictions-api -n fictions-app \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
 echo "🎉 API URL: http://$API_URL"
-echo "📖 API Docs: http://$API_URL/docs"
+echo "📖 API Docs: http://$API_URL/api/docs"
 
 # Test health endpoint
 curl http://$API_URL/health
@@ -519,7 +519,7 @@ curl http://$API_URL/health
 
 **📖 Next Steps:**
 - See [Testing](#-testing) section for how to test all endpoints
-- Visit `http://<your-url>/docs` for interactive Swagger UI
+- Visit `http://<your-url>/api/docs` for interactive Swagger UI
 - Check [Monitoring](#-monitoring--operations) for logs and status
 
 **💰 Important:** Remember to run `terraform destroy` when done to avoid AWS charges!
@@ -553,8 +553,8 @@ aws dynamodb delete-table \
 | Endpoint | Method | Description | Auth Required |
 |----------|--------|-------------|---------------|
 | `/health` | GET | Health check | No |
-| `/docs` | GET | Swagger UI documentation | No |
-| `/redoc` | GET | ReDoc documentation | No |
+| `/api/docs` | GET | Swagger UI documentation | No |
+| `/api/redoc` | GET | ReDoc documentation | No |
 | `/api/auth/register` | POST | Register new user | No |
 | `/api/auth/login` | POST | Login and get JWT token | No |
 | `/api/fictions/` | GET | List all fictions | Yes |
@@ -566,12 +566,12 @@ aws dynamodb delete-table \
 ### Interactive Documentation
 
 When the API is running, visit:
-- **Swagger UI:** http://localhost:3000/docs (local) or http://<load-balancer-url>/docs (AWS)
-- **ReDoc:** http://localhost:3000/redoc (local) or http://<load-balancer-url>/redoc (AWS)
+- **Swagger UI:** http://localhost:3000/api/docs (local) or http://<load-balancer-url>/api/docs (AWS)
+- **ReDoc:** http://localhost:3000/api/redoc (local) or http://<load-balancer-url>/api/redoc (AWS)
 
 ### Example Usage
 
-For detailed examples and interactive testing, use the **Swagger UI** at `/docs` endpoint.
+For detailed examples and interactive testing, use the **Swagger UI** at `/api/docs` endpoint.
 
 ---
 
@@ -640,7 +640,7 @@ webapp-devops/
 **Option 2: Interactive Swagger UI (Recommended)**
 ```bash
 # Open in browser
-open http://localhost:3000/docs
+open http://localhost:3000/api/docs
 
 # Now you can:
 # 1. Click on any endpoint
@@ -706,7 +706,7 @@ echo "API URL: http://$API_URL"
 **Option 1: Interactive Swagger UI (Recommended)**
 ```bash
 # Open in browser
-echo "http://$API_URL/docs"
+echo "http://$API_URL/api/docs"
 # Visit the URL and test interactively
 ```
 
@@ -822,7 +822,7 @@ This README contains all essential information for the project. Additional techn
 | [kubernetes/README.md](./kubernetes/README.md) | Kubernetes manifests and configuration details |
 | [infrastructure/terraform-eks/README.md](./infrastructure/terraform-eks/README.md) | Terraform infrastructure documentation |
 | [ops-tools/README_DEVOPS.md](./ops-tools/README_DEVOPS.md) | DevOps automation scripts guide |
-| Swagger UI (`/docs`) | Interactive API documentation (auto-generated) |
+| Swagger UI (`/api/docs`) | Interactive API documentation (auto-generated) |
 
 ---
 
