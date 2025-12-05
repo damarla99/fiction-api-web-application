@@ -11,7 +11,7 @@ module "aws_load_balancer_controller" {
 
   oidc_providers = {
     main = {
-      provider_arn               = aws_iam_openid_connect_provider.cluster.arn
+      provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
     }
   }
@@ -65,7 +65,7 @@ module "cluster_autoscaler" {
 
   oidc_providers = {
     main = {
-      provider_arn               = aws_iam_openid_connect_provider.cluster.arn
+      provider_arn               = module.eks.oidc_provider_arn
       namespace_service_accounts = ["kube-system:cluster-autoscaler"]
     }
   }

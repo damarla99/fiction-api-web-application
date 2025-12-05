@@ -50,7 +50,7 @@ A full-stack containerized web application demonstrating modern DevOps practices
 - ✅ **Auto-scaling** (Horizontal Pod Autoscaler + Cluster Autoscaler)
 - ✅ **Load Balancing** (AWS Load Balancer Controller)
 - ✅ **Secrets Management** (Kubernetes Secrets)
-- ✅ **Remote State** management (S3 + DynamoDB)
+- ✅ **Remote State** management (S3 with native locking - Terraform 1.10+)
 - ✅ **CI/CD Ready** structure
 - ✅ **Production-grade** security and best practices
 
@@ -325,7 +325,7 @@ terraform --version     # Should show 1.0+
 - EKS (Elastic Kubernetes Service)
 - ECR (Elastic Container Registry)
 - EC2, IAM, CloudWatch
-- S3, DynamoDB (for Terraform state)
+- S3 (for Terraform state with native locking)
 
 ---
 
@@ -429,13 +429,8 @@ aws s3api put-bucket-encryption \
     }]
   }'
 
-# Create DynamoDB table for state locking (prevents conflicts)
-aws dynamodb create-table \
-  --table-name fictions-api-terraform-locks-development \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region us-east-1
+# Note: Terraform 1.10+ uses native S3 state locking (use_lockfile = true)
+# No DynamoDB table needed!
 
 ```
 
@@ -600,11 +595,6 @@ terraform destroy
 
 # Delete S3 bucket (if created)
 aws s3 rb s3://fictions-api-terraform-state-development --force
-
-# Delete DynamoDB table (if created)
-aws dynamodb delete-table \
-  --table-name fictions-api-terraform-locks-development \
-  --region us-east-1
 ```
 
 ---
