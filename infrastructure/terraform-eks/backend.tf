@@ -20,10 +20,10 @@ terraform {
     }
   }
 
-  ============================================================================
-  Remote State Backend - S3 with DynamoDB Locking
-  ============================================================================
-  Uncomment after creating S3 bucket and DynamoDB table manually
+  # ============================================================================
+  # Remote State Backend - S3 with DynamoDB Locking
+  # ============================================================================
+  # Uncomment after creating S3 bucket and DynamoDB table manually
   
   backend "s3" {
     bucket         = "fictions-api-terraform-state-development"
