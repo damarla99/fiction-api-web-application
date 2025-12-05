@@ -11,7 +11,7 @@ module "vpc" {
   public_subnets  = var.public_subnet_cidrs
 
   enable_nat_gateway   = true
-  single_nat_gateway   = true  # Dev mode: single NAT gateway to save costs
+  single_nat_gateway   = true # Dev mode: single NAT gateway to save costs
   enable_dns_hostnames = true
   enable_dns_support   = true
 
