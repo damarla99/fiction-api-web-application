@@ -559,9 +559,17 @@ terraform destroy
 
 **CI/CD Pipeline Overview:**
 
-![CI/CD Workflow](docs/ci-workflow.png)
+**Deploy Pipeline:**
 
-*Automated pipeline: Validate → Build Images → Deploy Infrastructure → Deploy Applications → Destroy (manual approval)*
+![CI/CD Deploy Workflow](docs/ci-deploy-workflow.png)
+
+*Automated deployment: Validate → Build Backend → Build Frontend → Deploy Infrastructure → Deploy K8s*
+
+**Destroy Pipeline:**
+
+![CI/CD Destroy Workflow](docs/ci-destroy-workflow.png)
+
+*Cleanup workflow: Manual Approval → Destroy K8s → Destroy Infrastructure (requires approval)*
 
 ---
 
