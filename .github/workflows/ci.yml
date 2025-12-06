@@ -460,18 +460,32 @@ jobs:
         with:
           version: 'v${{ env.KUBECTL_VERSION }}'
 
+      - name: Check if cluster exists
+        id: check-cluster
+        run: |
+          if aws eks describe-cluster --name ${{ steps.cluster-info.outputs.cluster_name }} --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Cluster exists, will delete K8s resources"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Cluster not found, skipping K8s resource deletion"
+          fi
+
       - name: Update kubeconfig
+        if: steps.check-cluster.outputs.exists == 'true'
         run: |
           aws eks update-kubeconfig \
             --region ${{ env.AWS_REGION }} \
-            --name ${{ steps.cluster-info.outputs.cluster_name }} || true
+            --name ${{ steps.cluster-info.outputs.cluster_name }}
 
       - name: Delete Kubernetes resources
+        if: steps.check-cluster.outputs.exists == 'true'
         run: |
           kubectl delete -f kubernetes/ --ignore-not-found=true || true
           kubectl delete namespace fictions-app --ignore-not-found=true || true
 
       - name: Wait for resources to be deleted
+        if: steps.check-cluster.outputs.exists == 'true'
         run: |
           echo "Waiting for LoadBalancer to be deleted..."
           sleep 60
@@ -481,7 +495,7 @@ jobs:
     name: Destroy Infrastructure
     runs-on: ubuntu-latest
     needs: destroy-k8s
-    if: github.event.inputs.action == 'destroy'
+    if: always() && github.event.inputs.action == 'destroy'
     
     steps:
       - name: Checkout code
