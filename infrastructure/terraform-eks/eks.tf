@@ -24,9 +24,8 @@ module "eks" {
     vpc-cni = {
       most_recent = true
     }
-    aws-ebs-csi-driver = {
-      most_recent = true
-    }
+    # EBS CSI driver disabled for demo deployments (use emptyDir volumes)
+    # Saves deployment time (~20 min) and costs
   }
 
   # EKS Managed Node Group

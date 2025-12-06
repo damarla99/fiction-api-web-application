@@ -50,13 +50,7 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "200m"
-  volumeClaimTemplates:
-  - metadata:
-      name: mongodb-storage
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: gp3
-      resources:
-        requests:
-          storage: 5Gi
+      volumes:
+      - name: mongodb-storage
+        emptyDir: {}  # Ephemeral storage - perfect for demo deployments
 

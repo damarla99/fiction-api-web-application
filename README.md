@@ -46,7 +46,7 @@ That's it! See [Quick Start](#-quick-start---local-development) below for detail
 - [Monitoring & Operations](#-monitoring--operations)
 - [Security Features](#-security-features)
 - [Cost Estimation](#-cost-estimation-aws)
-- [Key Highlights](#-key-highlights-for-hiring-team)
+- [Key Highlights](#-key-highlights)
 
 ---
 
@@ -125,7 +125,7 @@ graph TB
                     subgraph WorkerNodes["Worker Nodes (EC2)<br/>1-2 t3.small<br/>No Public IPs"]
                         subgraph Pods["Application Pods"]
                             API[Fictions API<br/>FastAPI<br/>Auto-scaling 1-4 replicas]
-                            DB[MongoDB<br/>StatefulSet<br/>Persistent Volume]
+                            DB[MongoDB<br/>StatefulSet<br/>Ephemeral Storage]
                         end
                     end
                 end
@@ -135,7 +135,6 @@ graph TB
         ECR[ECR<br/>Container Registry]
         CloudWatch[CloudWatch<br/>Logs & Metrics]
         IAM[IAM Roles<br/>Permissions]
-        EBS[EBS Volumes<br/>Persistent Storage]
     end
     
     Users -->|HTTPS| IGW
@@ -147,7 +146,6 @@ graph TB
     WorkerNodes --> ECR
     WorkerNodes --> CloudWatch
     API -.->|Uses| IAM
-    DB -.->|Uses| EBS
     
     style Users fill:#e1f5ff
     style IGW fill:#ff9900
@@ -159,7 +157,6 @@ graph TB
     style ECR fill:#ff9900
     style CloudWatch fill:#ff9900
     style IAM fill:#ff9900
-    style EBS fill:#ff9900
 ```
 
 ### Network Architecture Details
@@ -361,7 +358,7 @@ Your API is now running locally. Jump to [Testing](#-testing-locally) to try it 
 
 ## 🌐 Cloud Deployment (AWS EKS)
 
-> ⏱️ **~25 minutes** | 💰 **~$120-150/month** | 🎯 **For production demos**
+> ⏱️ **~18-20 minutes** | 💰 **$2-3 per demo** | 🎯 **Optimized for portfolio demos**
 
 <details>
 <summary><b>Click to expand AWS deployment steps</b></summary>
@@ -422,14 +419,16 @@ terraform apply
 terraform output > outputs.txt
 ```
 
-**☕ Take a coffee break!** This step takes 15-20 minutes while AWS provisions:
+**☕ Take a coffee break!** This step takes 12-15 minutes while AWS provisions:
 - ✅ VPC with public/private subnets (2 Availability Zones)
 - ✅ Internet Gateway & NAT Gateway
 - ✅ EKS Cluster v1.31 (Kubernetes control plane)
 - ✅ EKS Node Groups (1-2 t3.small instances)
 - ✅ ECR Repository (for Docker images)
 - ✅ IAM Roles & Security Groups
-- ✅ Load Balancer Controller, Metrics Server, Autoscaler
+- ✅ Load Balancer Controller & Metrics Server
+
+> 💡 **Optimized for demos:** No persistent storage (data resets each deploy)
 
 #### **Step 3: Configure kubectl** ⏱️ 1 minute
 
@@ -1000,16 +999,22 @@ kubectl rollout status deployment/fictions-api -n fictions-app
 - Data Transfer: Variable
 
 **💡 Recommended Strategy:**
-1. Keep infrastructure **destroyed** by default
-2. Deploy via GitHub Actions before interviews/demos (~25 minutes)
+1. Keep infrastructure **destroyed** by default (zero cost)
+2. Deploy via GitHub Actions when needed (~18-20 minutes)
 3. Show your working application
-4. Destroy after demo (~10 minutes)
+4. Destroy after use (~10 minutes)
 
-This approach saves **$100+/month** while keeping full production capabilities!
+**Optimizations applied:**
+- ✅ No AWS Secrets Manager (uses Kubernetes secrets only)
+- ✅ No persistent storage (ephemeral volumes - perfect for demos)
+- ✅ Faster deployments (skip 20-minute EBS driver setup)
+- ✅ Lower cost per demo ($2-3 vs $3-5)
+
+This approach saves **$100+/month** while providing a fully functional demo environment!
 
 ---
 
-## 🎯 Key Highlights for Hiring Team
+## 🎯 Key Highlights
 
 ### What This Project Demonstrates
 
