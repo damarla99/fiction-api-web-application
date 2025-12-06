@@ -13,20 +13,40 @@ A full-stack containerized web application demonstrating modern DevOps practices
 
 ---
 
+## 🎯 Quick Summary
+
+**What is this?** A production-ready RESTful API for managing fictional stories with user authentication.
+
+**How to run it locally?**
+1. Install Docker Desktop
+2. Run `./dev-tools/start-local.sh`
+3. Open http://localhost:3000/api/docs
+
+**How to test it?**
+- Use Swagger UI (click & test in browser)
+- Or run `./dev-tools/test-api.sh`
+
+That's it! See [Quick Start](#-quick-start---local-development) below for details.
+
+---
+
 ## 📋 Table of Contents
 
+- [Quick Summary](#-quick-summary)
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Architecture](#-architecture)
 - [CI/CD Pipeline](#-cicd-pipeline)
 - [Prerequisites](#-prerequisites)
-- [Quick Start](#-quick-start)
-  - [Local Development](#local-development)
-  - [AWS EKS Deployment](#aws-eks-deployment)
-- [Testing](#-testing)
+- [Quick Start - Local Development](#-quick-start---local-development)
+- [Cloud Deployment (AWS EKS)](#-cloud-deployment-aws-eks)
+- [Testing Locally](#-testing-locally)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
 - [Monitoring & Operations](#-monitoring--operations)
+- [Security Features](#-security-features)
+- [Cost Estimation](#-cost-estimation-aws)
+- [Key Highlights](#-key-highlights-for-hiring-team)
 
 ---
 
@@ -101,8 +121,8 @@ graph TB
             end
             
             subgraph PrivateSubnets["Private Subnets (10.0.11-12.0/24)<br/>2 AZs"]
-                subgraph EKS["EKS Cluster"]
-                    subgraph WorkerNodes["Worker Nodes (EC2)<br/>2-4 t3.medium<br/>No Public IPs"]
+                subgraph EKS["EKS Cluster (v1.31)"]
+                    subgraph WorkerNodes["Worker Nodes (EC2)<br/>1-2 t3.small<br/>No Public IPs"]
                         subgraph Pods["Application Pods"]
                             API[Fictions API<br/>FastAPI<br/>Auto-scaling 1-4 replicas]
                             DB[MongoDB<br/>StatefulSet<br/>Persistent Volume]
@@ -264,121 +284,74 @@ git push origin main
 
 ## 📦 Prerequisites
 
-### For Local Development
+<details>
+<summary><b>Click to see prerequisites</b></summary>
 
-Install these tools on your machine:
+### For Local Development
 
 | Tool | Version | Installation |
 |------|---------|--------------|
-| **Python** | 3.11+ | [Download](https://www.python.org/downloads/) |
 | **Docker Desktop** | Latest | [Download](https://www.docker.com/products/docker-desktop/) |
 | **Git** | Latest | [Download](https://git-scm.com/downloads) |
 
-**Verify Installation:**
-```bash
-python --version        # Should show 3.11+
-docker --version        # Should show 20.10+
-docker-compose --version
-```
-
----
-
 ### For AWS EKS Deployment
-
-Install these additional tools:
 
 | Tool | Version | Installation |
 |------|---------|--------------|
 | **AWS CLI** | v2 | [Install Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |
-| **kubectl** | Latest | [Install Guide](https://kubernetes.io/docs/tasks/tools/) |
-| **Terraform** | 1.0+ | [Download](https://www.terraform.io/downloads) |
-
-**Verify Installation:**
-```bash
-aws --version           # Should show 2.x
-kubectl version --client
-terraform --version     # Should show 1.0+
-```
+| **kubectl** | 1.31+ | [Install Guide](https://kubernetes.io/docs/tasks/tools/) |
+| **Terraform** | 1.10+ | [Download](https://www.terraform.io/downloads) |
 
 **AWS Account Setup:**
+```bash
+# Configure credentials
+aws configure
 
-1. **Create AWS Account** (if you don't have one): [AWS Signup](https://aws.amazon.com/)
+# Verify access
+aws sts get-caller-identity
+```
 
-2. **Configure AWS Credentials:**
-   ```bash
-   aws configure
-   ```
-   You'll need to enter:
-   - AWS Access Key ID (get from AWS Console → IAM)
-   - AWS Secret Access Key
-   - Default region: `us-east-1`
-   - Default output format: `json`
-
-3. **Verify Access:**
-   ```bash
-   aws sts get-caller-identity
-   # Should show your account details
-   ```
-
-**Required AWS Permissions:**
-- VPC, Subnets, Internet Gateway, NAT Gateway
-- EKS (Elastic Kubernetes Service)
-- ECR (Elastic Container Registry)
-- EC2, IAM, CloudWatch
-- S3 (for Terraform state with native locking)
+</details>
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start - Local Development
 
-### Local Development
+> ⏱️ **5 minutes** | 💰 **Free** | 🎯 **Perfect for testing and development**
 
-> **Time Required:** 5 minutes  
-> **Cost:** Free (runs on your machine)
+### Three Simple Steps
 
-#### **Step 1: Clone the Repository**
+#### **1️⃣ Clone and Navigate**
 
 ```bash
 git clone <your-repo-url>
 cd webapp-devops
 ```
 
-#### **Step 2: Start the Application**
+#### **2️⃣ Start Everything**
 
 ```bash
-# Use the helper script (checks prerequisites, starts services, shows status)
 ./dev-tools/start-local.sh
 ```
 
-The script will:
-- ✅ Check Docker is installed and running
-- ✅ Start MongoDB + FastAPI
-- ✅ Wait for services to be healthy
-- ✅ Show you the API URL and helpful commands
+This single command will:
+- ✅ Check Docker is running
+- ✅ Start MongoDB database
+- ✅ Start FastAPI application
+- ✅ Run health checks
+- ✅ Show you what's running
 
-#### **Step 3: Verify It's Running** (Optional)
+#### **3️⃣ Open Swagger UI (Interactive Testing)**
 
-The `start-local.sh` script already checks health, but you can verify manually:
+Open in your browser: **http://localhost:3000/api/docs**
 
-```bash
-# Test health endpoint
-curl http://localhost:3000/health
-# Expected: {"status":"ok","app":"Fictions API",...}
+You'll see an interactive interface where you can test all API endpoints with a single click!
 
-# Check services status
-docker-compose ps
-# Expected: All services "Up"
-```
+### ✅ That's It!
 
-#### **Step 4: Access the API**
+Your API is now running locally. Jump to [Testing](#-testing-locally) to try it out.
 
-Open your browser to:
-- **🌐 API:** http://localhost:3000
-- **📖 Swagger UI (Interactive Docs):** http://localhost:3000/api/docs
-
-**📖 Next:** See [Testing](#-testing) section for detailed testing instructions.
-
-#### **Step 5: Stop the Application**
+### 🛑 When Done
 
 ```bash
 ./dev-tools/stop-local.sh
@@ -386,20 +359,16 @@ Open your browser to:
 
 ---
 
-**💡 Quick Access URLs:**
-| Service | URL |
-|---------|-----|
-| API Base | http://localhost:3000 |
-| Swagger UI | http://localhost:3000/api/docs |
-| Health Check | http://localhost:3000/health |
-| MongoDB | localhost:27017 |
+## 🌐 Cloud Deployment (AWS EKS)
+
+> ⏱️ **~25 minutes** | 💰 **~$120-150/month** | 🎯 **For production demos**
+
+<details>
+<summary><b>Click to expand AWS deployment steps</b></summary>
 
 ---
 
-### AWS EKS Deployment
-
-> **Time Required:** ~25-30 minutes for full deployment  
-> **Cost:** ~$150-200/month (destroy when not in use to save costs)
+### AWS EKS Deployment Steps
 
 #### **Step 1: Setup Terraform Backend** ⏱️ 2 minutes (Optional but Recommended)
 
@@ -456,8 +425,8 @@ terraform output > outputs.txt
 **☕ Take a coffee break!** This step takes 15-20 minutes while AWS provisions:
 - ✅ VPC with public/private subnets (2 Availability Zones)
 - ✅ Internet Gateway & NAT Gateway
-- ✅ EKS Cluster (Kubernetes control plane)
-- ✅ EKS Node Groups (2-4 EC2 instances)
+- ✅ EKS Cluster v1.31 (Kubernetes control plane)
+- ✅ EKS Node Groups (1-2 t3.small instances)
 - ✅ ECR Repository (for Docker images)
 - ✅ IAM Roles & Security Groups
 - ✅ Load Balancer Controller, Metrics Server, Autoscaler
@@ -474,7 +443,7 @@ aws eks update-kubeconfig \
 
 # Verify connection
 kubectl get nodes
-# Expected: 2-4 nodes with STATUS "Ready"
+# Expected: 1-2 nodes with STATUS "Ready"
 
 # Check system pods
 kubectl get pods -n kube-system
@@ -594,6 +563,8 @@ terraform destroy
 # Delete S3 bucket (if created)
 aws s3 rb s3://fictions-api-terraform-state-development --force
 ```
+
+</details>
 
 ---
 
@@ -761,34 +732,44 @@ webapp-devops/
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing Locally
 
-### Testing Locally (After Starting Services)
+After starting the application (`./dev-tools/start-local.sh`), choose your preferred testing method:
 
-**Option 1: Automated Test Script**
+### 🎯 Option 1: Automated Test Script (Easiest)
+
 ```bash
 ./dev-tools/test-api.sh
 ```
 
-**Option 2: Interactive Swagger UI (Recommended)**
-```bash
-# Open in browser
-open http://localhost:3000/api/docs
+This script automatically tests:
+- ✅ Health check
+- ✅ User registration
+- ✅ User login
+- ✅ Fiction creation
+- ✅ Fiction retrieval
 
-# Now you can:
-# 1. Click on any endpoint
-# 2. Click "Try it out"
-# 3. Fill in the form
-# 4. Click "Execute"
-# 5. See the response
-```
+### 🌐 Option 2: Swagger UI (Most Interactive)
 
-**Option 3: Manual curl Commands**
+1. Open in browser: **http://localhost:3000/api/docs**
+2. Click any endpoint (e.g., `POST /api/auth/register`)
+3. Click **"Try it out"**
+4. Fill in the example values
+5. Click **"Execute"**
+6. See the response below!
+
+> 💡 **Tip:** Swagger UI is the easiest way to explore and test all endpoints interactively.
+
+### ⌨️ Option 3: Manual Testing with curl
+
+<details>
+<summary><b>Click to see curl examples</b></summary>
+
 ```bash
-# 1. Health check
+# 1. Check if API is running
 curl http://localhost:3000/health
 
-# 2. Register a user
+# 2. Register a new user
 curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
@@ -797,37 +778,42 @@ curl -X POST http://localhost:3000/api/auth/register \
     "password": "test123"
   }'
 
-# 3. Login to get token
+# 3. Login and get token
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
     "password": "test123"
   }'
+# Copy the "token" value from the response
 
-# 4. Copy the "token" from response, then use it:
-export TOKEN="<paste-your-token-here>"
+# 4. Use token to create a fiction
+export TOKEN="paste-your-token-here"
 
-# 5. Create a fiction
 curl -X POST http://localhost:3000/api/fictions/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "title": "My First Fiction",
+    "title": "My Test Story",
     "author": "Test Author",
     "genre": "fantasy",
     "description": "A test story",
     "content": "Once upon a time..."
   }'
 
-# 6. Get all fictions
+# 5. Get all fictions
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:3000/api/fictions/
 ```
 
+</details>
+
 ---
 
-### Testing on AWS (After EKS Deployment)
+## 🌐 Testing on AWS
+
+<details>
+<summary><b>Click to see AWS testing instructions</b></summary>
 
 **Get your API URL first:**
 ```bash
@@ -894,6 +880,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 - ✅ Update Fiction: Test PUT request
 - ✅ Delete Fiction: Test DELETE request
 
+</details>
+
 ---
 
 ## 📊 Monitoring & Operations
@@ -945,19 +933,6 @@ kubectl rollout status deployment/fictions-api -n fictions-app
 
 ---
 
-## 📚 Documentation
-
-This README contains all essential information for the project. Additional technical details:
-
-| Document | Purpose |
-|----------|---------|
-| [README.md](./README.md) | This file - Complete project overview and deployment guide |
-| [kubernetes/README.md](./kubernetes/README.md) | Kubernetes manifests and configuration details |
-| [infrastructure/terraform-eks/README.md](./infrastructure/terraform-eks/README.md) | Terraform infrastructure documentation |
-| [ops-tools/README_DEVOPS.md](./ops-tools/README_DEVOPS.md) | DevOps automation scripts guide |
-| Swagger UI (`/api/docs`) | Interactive API documentation (auto-generated) |
-
----
 
 ## 🔐 Security Features
 
@@ -1011,19 +986,26 @@ This README contains all essential information for the project. Additional techn
 
 ## 💰 Cost Estimation (AWS)
 
-**Development Environment (~$150-200/month):**
+**Deploy-on-Demand (Recommended for Portfolio):**
+- **Cost per demo:** ~$3-5 (2-3 hours of runtime)
+- **Monthly cost (4 demos):** ~$12-20
+- **Savings vs always-on:** 85-90%
+
+**Always-On Development (~$120-150/month):**
 - EKS Cluster: $73/month (control plane)
-- EC2 Instances: 2-4 t3.medium (~$60-120/month)
+- EC2 Instances: 1-2 t3.small (~$30-60/month)
 - NAT Gateway: ~$32/month
 - Load Balancer: ~$16/month
 - ECR Storage: <$1/month
 - Data Transfer: Variable
 
-**Tips to minimize costs:**
-- Run only when needed
-- Use `terraform destroy` when not in use
-- Consider smaller instance types for demo
-- Use AWS Free Tier where applicable
+**💡 Recommended Strategy:**
+1. Keep infrastructure **destroyed** by default
+2. Deploy via GitHub Actions before interviews/demos (~25 minutes)
+3. Show your working application
+4. Destroy after demo (~10 minutes)
+
+This approach saves **$100+/month** while keeping full production capabilities!
 
 ---
 
@@ -1065,16 +1047,6 @@ This README contains all essential information for the project. Additional techn
 
 ---
 
-## 📧 Contact
-
-**Project Author:** [Your Name]  
-**Email:** [Your Email]  
-**LinkedIn:** [Your LinkedIn]  
-**GitHub:** [Your GitHub]
-
 ---
 
-
-**Ready to deploy?** Start with [Quick Start](#-quick-start) above! 🚀
-
-**Questions?** Check the detailed documentation in the respective `.md` files.
+**Ready to deploy?** Start with [Quick Start - Local Development](#-quick-start---local-development) above! 🚀
