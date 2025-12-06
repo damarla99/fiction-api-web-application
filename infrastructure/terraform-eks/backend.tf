@@ -21,17 +21,16 @@ terraform {
   }
 
   # ============================================================================
-  # Remote State Backend - S3 with Native State Locking
+  # Remote State Backend - S3
   # ============================================================================
-  # Terraform 1.10+ supports native S3 state locking via use_lockfile
-  # No DynamoDB table required!
+  # For demo/development - basic S3 backend without state locking
+  # State locking disabled for compatibility with Terraform < 1.10
 
   backend "s3" {
-    bucket       = "fictions-api-terraform-state-development"
-    key          = "eks/terraform.tfstate"
-    region       = "us-east-1"
-    encrypt      = true
-    use_lockfile = true # Enable native S3 state locking (Terraform 1.10+)
+    bucket  = "fictions-api-terraform-state-development"
+    key     = "eks/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
   }
 }
 
