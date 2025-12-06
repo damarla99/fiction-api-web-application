@@ -385,8 +385,8 @@ jobs:
           echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Frontend UI:** http://${ALB_URL}" >> $GITHUB_STEP_SUMMARY
-          echo "**Backend API:** http://${ALB_URL}/api" >> $GITHUB_STEP_SUMMARY
-          echo "**Swagger UI:** http://${ALB_URL}/api/docs" >> $GITHUB_STEP_SUMMARY
+          echo "**API Health Check:** http://${ALB_URL}/health" >> $GITHUB_STEP_SUMMARY
+          echo "**Swagger UI (API Docs):** http://${ALB_URL}/api/docs" >> $GITHUB_STEP_SUMMARY
 
       - name: Check application health
         run: |
@@ -400,9 +400,9 @@ jobs:
           echo "==================================================="
           echo "🎉 Full-Stack Deployment Complete!"
           echo "==================================================="
-          echo "Frontend:   ${{ steps.get-url.outputs.app_url }}"
-          echo "Backend:    ${{ steps.get-url.outputs.app_url }}/api"
-          echo "Swagger UI: ${{ steps.get-url.outputs.app_url }}/api/docs"
+          echo "Frontend:        ${{ steps.get-url.outputs.app_url }}"
+          echo "Health Check:    ${{ steps.get-url.outputs.app_url }}/health"
+          echo "Swagger UI:      ${{ steps.get-url.outputs.app_url }}/api/docs"
           echo "==================================================="
 
   # Job 6: Manual Approval for Destroy

@@ -504,11 +504,11 @@ sleep 120
 export APP_URL=$(kubectl get ingress fictions-app-ingress -n fictions-app \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-echo "✅ Frontend:    http://$APP_URL"
-echo "✅ Backend API: http://$APP_URL/api"
-echo "✅ Swagger UI:  http://$APP_URL/api/docs"
+echo "✅ Frontend:        http://$APP_URL"
+echo "✅ Health Check:    http://$APP_URL/health"
+echo "✅ Swagger UI:      http://$APP_URL/api/docs"
 
-# Test
+# Test health check
 curl http://$APP_URL/health
 ```
 
@@ -618,11 +618,11 @@ aws eks update-kubeconfig --region us-east-1 --name fictions-api
 export APP_URL=$(kubectl get ingress fictions-app-ingress -n fictions-app \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-echo "Frontend:   http://$APP_URL"
-echo "Backend:    http://$APP_URL/api"
-echo "Swagger UI: http://$APP_URL/api/docs"
+echo "Frontend:        http://$APP_URL"
+echo "Health Check:    http://$APP_URL/health"
+echo "Swagger UI:      http://$APP_URL/api/docs"
 
-# Test
+# Test health check
 curl http://$APP_URL/health
 ```
 
