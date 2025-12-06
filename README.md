@@ -622,6 +622,88 @@ When the API is running, visit:
 - **Swagger UI:** `http://localhost:3000/api/docs` (local) or `http://<LOAD_BALANCER_URL>/api/docs` (AWS)
 - **ReDoc:** `http://localhost:3000/api/redoc` (local) or `http://<LOAD_BALANCER_URL>/api/redoc` (AWS)
 
+### API Field Reference
+
+> **⚠️ Important:** Pay close attention to field names - common mistakes include using `name` instead of `username`, `access_token` instead of `token`, or `summary` instead of `description`.
+
+#### User Registration (`POST /api/auth/register`)
+
+**Required Fields:**
+```json
+{
+  "username": "string",    // 3-30 characters, alphanumeric + underscore/hyphen
+  "email": "string",       // Valid email format (e.g., user@example.com)
+  "password": "string"     // Minimum 6 characters
+}
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",  // JWT token for authentication
+  "token_type": "bearer",
+  "user": {
+    "_id": "...",
+    "username": "...",
+    "email": "...",
+    "created_at": "..."
+  }
+}
+```
+
+#### User Login (`POST /api/auth/login`)
+
+**Required Fields:**
+```json
+{
+  "email": "string",      // Registered email address
+  "password": "string"    // User's password
+}
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",  // Use this token in Authorization header
+  "token_type": "bearer",
+  "user": { ... }
+}
+```
+
+#### Create Fiction (`POST /api/fictions/`)
+
+**Required Fields:**
+```json
+{
+  "title": "string",        // 1-200 characters
+  "author": "string",       // 1-100 characters
+  "genre": "string",        // Must be lowercase: fantasy, sci-fi, mystery, romance, 
+                            // thriller, horror, adventure, drama, comedy, other
+  "description": "string",  // ⚠️ NOT "summary"! Max 500 characters
+  "content": "string"       // Minimum 1 character
+}
+```
+
+**Valid Genres:**
+- `fantasy`, `sci-fi`, `mystery`, `romance`, `thriller`, `horror`, `adventure`, `drama`, `comedy`, `other`
+
+**Authorization Required:**
+- Add header: `Authorization: Bearer <your-token-here>`
+
+#### Update Fiction (`PUT /api/fictions/{id}`)
+
+Same fields as Create Fiction (all fields required).
+
+#### Common Mistakes to Avoid
+
+| ❌ Wrong Field | ✅ Correct Field | Endpoint |
+|----------------|------------------|----------|
+| `"name"` | `"username"` | `/api/auth/register` |
+| `"access_token"` | `"token"` | Response from login/register |
+| `"summary"` | `"description"` | `/api/fictions/` |
+| `"Fantasy"` | `"fantasy"` | `/api/fictions/` (genre must be lowercase) |
+| `"Sci-Fi"` | `"sci-fi"` | `/api/fictions/` (genre must be lowercase) |
+
 ### Example Usage
 
 For detailed examples and interactive testing, use the **Swagger UI** at `/api/docs` endpoint.
@@ -712,9 +794,9 @@ curl http://localhost:3000/health
 curl -X POST http://localhost:3000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
+    "username": "testuser",
     "email": "test@example.com",
-    "password": "test123",
-    "name": "Test User"
+    "password": "test123"
   }'
 
 # 3. Login to get token
@@ -725,7 +807,7 @@ curl -X POST http://localhost:3000/api/auth/login \
     "password": "test123"
   }'
 
-# 4. Copy the "access_token" from response, then use it:
+# 4. Copy the "token" from response, then use it:
 export TOKEN="<paste-your-token-here>"
 
 # 5. Create a fiction
@@ -735,8 +817,8 @@ curl -X POST http://localhost:3000/api/fictions/ \
   -d '{
     "title": "My First Fiction",
     "author": "Test Author",
-    "genre": "Fantasy",
-    "summary": "A test story",
+    "genre": "fantasy",
+    "description": "A test story",
     "content": "Once upon a time..."
   }'
 
@@ -772,9 +854,9 @@ curl http://$API_URL/health
 curl -X POST http://$API_URL/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
+    "username": "demouser",
     "email": "demo@example.com",
-    "password": "demo123",
-    "name": "Demo User"
+    "password": "demo123"
   }'
 
 # 3. Login to get token
@@ -785,7 +867,7 @@ curl -X POST http://$API_URL/api/auth/login \
     "password": "demo123"
   }'
 
-# 4. Copy the "access_token" from response
+# 4. Copy the "token" from response
 export TOKEN="<paste-your-token-here>"
 
 # 5. Create a fiction
@@ -795,8 +877,8 @@ curl -X POST http://$API_URL/api/fictions/ \
   -d '{
     "title": "Cloud Fiction",
     "author": "AWS Author",
-    "genre": "Sci-Fi",
-    "summary": "A story in the cloud",
+    "genre": "sci-fi",
+    "description": "A story in the cloud",
     "content": "In the AWS cloud..."
   }'
 

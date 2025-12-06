@@ -37,7 +37,7 @@ REGISTER_RESPONSE=$(curl -s -X POST $BASE_URL/api/auth/register \
     "password": "password123"
   }')
 
-if echo $REGISTER_RESPONSE | grep -q "access_token"; then
+if echo $REGISTER_RESPONSE | grep -q "token"; then
     echo -e "${GREEN}✅ User registration successful${NC}"
 else
     echo -e "${YELLOW}⚠️  User might already exist (this is OK)${NC}"
@@ -53,7 +53,7 @@ LOGIN_RESPONSE=$(curl -s -X POST $BASE_URL/api/auth/login \
     "password": "password123"
   }')
 
-TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"access_token":"[^"]*' | grep -o '[^"]*$')
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"token":"[^"]*' | grep -o '[^"]*$')
 
 if [ -n "$TOKEN" ]; then
     echo -e "${GREEN}✅ Login successful${NC}"
@@ -73,7 +73,7 @@ CREATE_RESPONSE=$(curl -s -L -X POST $BASE_URL/api/fictions/ \
     "title": "Dev Test Story",
     "author": "Developer",
     "genre": "fantasy",
-    "summary": "A test story created by developer",
+    "description": "A test story created by developer",
     "content": "Once upon a time, a developer wrote some code..."
   }')
 
@@ -84,6 +84,8 @@ if [ -n "$FICTION_ID" ]; then
     echo "   Fiction ID: $FICTION_ID"
 else
     echo -e "${RED}❌ Fiction creation failed${NC}"
+    echo "Response: $CREATE_RESPONSE"
+    echo "Token used: ${TOKEN:0:20}..."
     exit 1
 fi
 echo ""

@@ -22,7 +22,7 @@ permissions:
 env:
   AWS_REGION: us-east-1
   TERRAFORM_VERSION: 1.10.3  # Required for native S3 state locking (use_lockfile)
-  KUBECTL_VERSION: 1.28.0
+  KUBECTL_VERSION: 1.34.0  # Matches EKS cluster version (1.34 - latest stable)
 
 jobs:
   # Job 1: Validate and Test
