@@ -126,7 +126,7 @@ kubectl get all -n fictions-app
 kubectl get pods -n fictions-app
 
 # Check service (get load balancer URL)
-kubectl get svc fictions-api-service -n fictions-app
+kubectl get svc fictions-api -n fictions-app
 
 # Check logs
 kubectl logs -f deployment/fictions-api -n fictions-app
@@ -138,7 +138,7 @@ kubectl logs -f deployment/fictions-api -n fictions-app
 
 ```bash
 # Get Load Balancer URL
-kubectl get svc fictions-api-service -n fictions-app \
+kubectl get svc fictions-api -n fictions-app \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 
 # Test

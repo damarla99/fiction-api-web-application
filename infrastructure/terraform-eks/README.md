@@ -143,10 +143,10 @@ kubectl rollout status deployment/fictions-api -n fictions-app
 
 ```bash
 # Get Load Balancer URL
-kubectl get svc fictions-api-service -n fictions-app
+kubectl get svc fictions-api -n fictions-app
 
 # Or use this command
-kubectl get svc fictions-api-service -n fictions-app \
+kubectl get svc fictions-api -n fictions-app \
     -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
 
@@ -156,7 +156,7 @@ kubectl get svc fictions-api-service -n fictions-app \
 
 ```bash
 # Get LB hostname
-LB_HOST=$(kubectl get svc fictions-api-service -n fictions-app \
+LB_HOST=$(kubectl get svc fictions-api -n fictions-app \
     -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
 # Test health endpoint
@@ -183,7 +183,7 @@ EKS Cluster: fictions-api
     │   └── HorizontalPodAutoscaler (2-10 pods)
     ├── Services
     │   ├── mongodb-service (ClusterIP)
-    │   └── fictions-api-service (LoadBalancer)
+    │   └── fictions-api (LoadBalancer)
     ├── ConfigMaps
     │   └── fictions-api-config
     └── Secrets
@@ -451,7 +451,7 @@ kubectl logs -n kube-system \
     deployment/aws-load-balancer-controller
 
 # Check service
-kubectl describe svc fictions-api-service -n fictions-app
+kubectl describe svc fictions-api -n fictions-app
 ```
 
 ### Nodes Not Scaling

@@ -323,7 +323,7 @@ kubectl exec -it <pod-name> -n fictions-app -- /bin/sh
 kubectl get endpoints -n fictions-app
 
 # Check load balancer
-kubectl describe svc fictions-api-service -n fictions-app
+kubectl describe svc fictions-api -n fictions-app
 ```
 
 ---
@@ -570,7 +570,7 @@ kubectl describe pod <pod-name> -n fictions-app
 
 ```bash
 # Check service
-kubectl describe svc fictions-api-service -n fictions-app
+kubectl describe svc fictions-api -n fictions-app
 
 # Check AWS LB Controller
 kubectl logs -n kube-system infrastructure/aws-load-balancer-controller

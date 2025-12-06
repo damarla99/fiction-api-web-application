@@ -240,7 +240,7 @@ resource "kubernetes_deployment" "app" {
 # Application Service
 resource "kubernetes_service" "app" {
   metadata {
-    name      = "fictions-api-service"
+    name      = "fictions-api"
     namespace = kubernetes_namespace.app.metadata[0].name
 
     annotations = {

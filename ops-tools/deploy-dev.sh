@@ -173,13 +173,13 @@ get_app_url() {
     echo "Waiting for Load Balancer to be ready..."
     sleep 10
     
-    APP_URL=$(kubectl get svc fictions-api-service -n fictions-app \
+    APP_URL=$(kubectl get svc fictions-api -n fictions-app \
         -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
     
     if [ "$APP_URL" = "pending" ] || [ -z "$APP_URL" ]; then
         echo -e "${YELLOW}⏳ Load Balancer is still provisioning...${NC}"
         echo "   Run this command to check status:"
-        echo "   kubectl get svc fictions-api-service -n fictions-app"
+        echo "   kubectl get svc fictions-api -n fictions-app"
     else
         echo -e "${GREEN}✅ Application is accessible at:${NC}"
         echo "   http://$APP_URL"

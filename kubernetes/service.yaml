@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: fictions-api-service
+  name: fictions-api
   namespace: fictions-app
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"

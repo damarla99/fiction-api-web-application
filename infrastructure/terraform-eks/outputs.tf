@@ -35,7 +35,7 @@ output "configure_kubectl" {
 
 output "load_balancer_hostname" {
   description = "Load Balancer hostname (available after deployment)"
-  value       = "Run: kubectl get svc fictions-api-service -n fictions-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+  value       = "Run: kubectl get svc fictions-api -n fictions-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
 }
 
 output "vpc_id" {
