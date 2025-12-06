@@ -1,0 +1,7 @@
+# Documentation Assets
+
+This folder contains images and screenshots for the README documentation.
+
+## Files:
+- `ci-workflow.png` - GitHub Actions CI/CD pipeline workflow screenshot
+

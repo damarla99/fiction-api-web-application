@@ -11,6 +11,12 @@ A full-stack containerized web application demonstrating modern DevOps practices
 [![Terraform](https://img.shields.io/badge/Terraform-IaC-purple.svg)](https://www.terraform.io/)
 [![AWS](https://img.shields.io/badge/AWS-EKS-orange.svg)](https://aws.amazon.com/eks/)
 
+## TL;DR
+
+- **Full-stack Fictions web app**: React frontend + FastAPI backend + MongoDB
+- **Fully containerized & deployed to AWS EKS** behind an ALB Ingress using Terraform + Kubernetes
+- **Includes JWT auth, rate limiting, HPA**, and **local + AWS + CI/CD** deployment paths
+
 ---
 
 ## 📋 Table of Contents
@@ -18,11 +24,13 @@ A full-stack containerized web application demonstrating modern DevOps practices
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Architecture](#-architecture)
+- [Quickstart for Reviewers](#-quickstart-for-reviewers)
 - [Prerequisites](#-prerequisites)
 - [Deployment & Testing](#-deployment--testing)
-  - [Approach 1: Local Development](#approach-1-local-development--testing)
-  - [Approach 2: Manual AWS Deployment](#approach-2-manual-aws-deployment--testing)
-  - [Approach 3: CI/CD Deployment](#approach-3-cicd-deployment--testing)
+  - [Approach 1: Local Development](#approach-1-local-development)
+  - [Approach 2: Manual AWS Deployment](#approach-2-manual-aws-deployment)
+  - [Approach 3: CI/CD Deployment](#approach-3-cicd-deployment)
+- [Demo & Testing Flows](#-demo--testing-flows)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
 - [Security Features](#-security-features)
@@ -187,6 +195,53 @@ Internet (Docker Hub, GitHub, OS updates)
 
 ---
 
+## 🚀 Quickstart for Reviewers
+
+**Want to see it in action?** Here are the fastest ways:
+
+### **Option 1: Run Locally** (5 minutes, free)
+
+```bash
+# Start all services (frontend + backend + database)
+./dev-tools/start-local.sh
+
+# Access the application
+# Frontend UI:    http://localhost
+# Swagger API:    http://localhost:3000/api/docs
+# Health Check:   http://localhost:3000/health
+```
+
+Test the full flow: Register → Login → Create fiction → Edit → Delete
+
+### **Option 2: Deploy to AWS** (20 minutes, ~$2-3)
+
+```bash
+# 1. Create S3 backend for Terraform state
+aws s3api create-bucket --bucket fictions-api-terraform-state-development --region us-east-1
+
+# 2. Deploy infrastructure
+cd infrastructure/terraform-eks
+terraform init
+terraform apply  # Type 'yes' when prompted
+
+# 3. Deploy application
+kubectl apply -f ../../kubernetes/
+
+# 4. Get application URL
+kubectl get ingress fictions-app-ingress -n fictions-app
+# Open the ALB hostname in your browser
+```
+
+### **Option 3: CI/CD Deployment** (automated)
+
+Push to `main` branch or use GitHub Actions manual trigger - fully automated deployment!
+
+---
+
+**📖 For detailed step-by-step instructions**, see [Deployment & Testing](#-deployment--testing) below.
+
+---
+
 ## 📦 Prerequisites
 
 <details>
@@ -232,7 +287,7 @@ Choose your deployment approach based on your needs:
 
 ---
 
-### Approach 1: Local Development + Testing
+### Approach 1: Local Development
 
 > ⏱️ **5 minutes** | 💰 **Free** | 🎯 **Perfect for development**
 
@@ -264,67 +319,26 @@ cd webapp-devops
 
 #### **Step 3: Access & Test**
 
-**Option A: Full-Stack UI (Recommended)**
+**Quick Test Options:**
 
 ```bash
-# Open frontend in browser
+# Option A: Frontend UI (Recommended)
 open http://localhost
-# Or manually navigate to: http://localhost
-```
 
-**Test Flow:**
-1. **Register** - Create account (username, email, password)
-2. **Login** - Sign in with credentials
-3. **Create Fiction** - Fill form (title, author, genre, description, content)
-4. **View List** - See all fictions
-5. **Edit Your Fiction** - Click Edit (only on your stories)
-6. **Delete** - Remove a fiction
-
-**Option B: Backend API Only (Swagger UI)**
-
-```bash
-# Open Swagger UI
+# Option B: Swagger UI (API Testing)
 open http://localhost:3000/api/docs
-```
 
-Interactive API testing in browser - no curl needed!
-
-**Option C: Automated Testing**
-
-```bash
+# Option C: Automated Testing Script
 ./dev-tools/test-api.sh
-```
 
-**Expected:**
-```
-✅ Health check passed
-✅ User registered
-✅ Login successful
-✅ Fiction created
-✅ Fiction retrieved
-```
-
-**Option D: Manual curl Testing**
-
-```bash
-# Health check
+# Option D: Manual Health Check
 curl http://localhost:3000/health
-
-# Register
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"test","email":"test@example.com","password":"test123"}'
-
-# Login (copy token from response)
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"test123"}'
-
-# Use token for authenticated requests
-export TOKEN="paste-token-here"
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3000/api/fictions/
 ```
+
+**📖 For complete demo flows** (register → login → create → edit → delete), see:
+- [Frontend UI Demo](#frontend-ui-demo-recommended)
+- [Swagger UI Demo](#swagger-ui-demo-api-testing)
+- [Rate Limiting Demo](#rate-limiting-demo)
 
 #### **Step 4: View Logs (Optional)**
 
@@ -368,7 +382,7 @@ docker-compose down -v
 
 ---
 
-### Approach 2: Manual AWS Deployment + Testing
+### Approach 2: Manual AWS Deployment
 
 > ⏱️ **20 minutes** | 💰 **~$2-3 per demo** | 🎯 **Full control via CLI**
 
@@ -505,42 +519,23 @@ curl http://$APP_URL/health
 
 #### **Step 5: Test on AWS**
 
-**Option A: Frontend UI (Full Experience)**
+**Quick Access:**
 
 ```bash
-# Open frontend in browser
+# Frontend UI
 open http://$APP_URL
-```
 
-Test the complete flow:
-1. Register a user
-2. Login
-3. Create fictions
-4. Edit/Delete your fictions
-
-**Option B: Swagger UI (API Testing)**
-
-```bash
-# Open Swagger UI
+# Swagger UI
 open http://$APP_URL/api/docs
-```
 
-**Option C: curl Commands**
-
-```bash
 # Health check
 curl http://$APP_URL/health
-
-# Register
-curl -X POST http://$APP_URL/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"demo","email":"demo@example.com","password":"test123"}'
-
-# Login
-curl -X POST http://$APP_URL/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@example.com","password":"test123"}'
 ```
+
+**📖 For complete demo flows**, see:
+- [Frontend UI Demo](#frontend-ui-demo-recommended) - Full register → login → CRUD flow
+- [Swagger UI Demo](#swagger-ui-demo-api-testing) - API testing with authentication
+- [Rate Limiting Demo](#rate-limiting-demo) - Test rate limiting behavior
 
 #### **Step 6: Cleanup (Destroy to Save Costs)**
 
@@ -558,9 +553,17 @@ terraform destroy
 
 ---
 
-### Approach 3: CI/CD Deployment + Testing
+### Approach 3: CI/CD Deployment
 
 > ⏱️ **20 minutes** | 🤖 **Fully automated** | 🎯 **Best for demos**
+
+**CI/CD Pipeline Overview:**
+
+![CI/CD Workflow](docs/ci-workflow.png)
+
+*Automated pipeline: Validate → Build Images → Deploy Infrastructure → Deploy Applications → Destroy (manual approval)*
+
+---
 
 #### **Step 1: Add GitHub Secrets**
 
@@ -625,9 +628,23 @@ curl http://$APP_URL/health
 
 **Or:** Check the GitHub Actions workflow output for the URL!
 
-**Test in browser:** 
-- Open `http://$APP_URL` → Full React UI
-- Or `http://$APP_URL/api/docs` → Swagger API testing
+**Quick Access:**
+
+```bash
+# Frontend UI
+open http://$APP_URL
+
+# Swagger UI
+open http://$APP_URL/api/docs
+
+# Health check
+curl http://$APP_URL/health
+```
+
+**📖 For complete demo flows**, see:
+- [Frontend UI Demo](#frontend-ui-demo-recommended) - Full register → login → CRUD flow
+- [Swagger UI Demo](#swagger-ui-demo-api-testing) - API testing with authentication
+- [Rate Limiting Demo](#rate-limiting-demo) - Test rate limiting behavior
 
 #### **Step 5: Destroy (Save Costs)**
 
@@ -637,6 +654,192 @@ curl http://$APP_URL/health
 4. Wait ~10 minutes
 
 **✅ Done!** All AWS resources deleted, $0 charges.
+
+---
+
+## 🎯 Demo & Testing Flows
+
+> **Referenced by all deployment approaches above** - Use these flows after deploying locally or on AWS
+
+### Frontend UI Demo (Recommended)
+
+**Access:** 
+- Local: `http://localhost`
+- AWS: `http://$APP_URL`
+
+**Complete Demo Flow:**
+
+1. **Register User**
+   - Click "Register"
+   - Fill: Username, Email, Password
+   - Click "Sign Up"
+   - ✅ Success: Redirects to login
+
+2. **Login**
+   - Enter email & password
+   - Click "Login"
+   - ✅ Success: Shows fictions list (empty initially)
+
+3. **Create Fiction**
+   - Click "Create New Fiction"
+   - Fill form:
+     - Title: "My First Story"
+     - Author: "Your Name"
+     - Genre: fantasy, sci-fi, mystery, or romance
+     - Description: "A brief summary"
+     - Content: "Your story content..."
+   - Click "Create"
+   - ✅ Success: Fiction appears in list with "Your Story" badge
+
+4. **View Fictions**
+   - See all fictions from all users
+   - Your fictions show "Your Story" badge
+   - Your fictions have Edit/Delete buttons
+
+5. **Edit Your Fiction**
+   - Click "Edit" on your fiction
+   - Update any field
+   - Click "Update"
+   - ✅ Success: Changes saved
+
+6. **Delete Fiction**
+   - Click "Delete" on your fiction
+   - Confirm deletion
+   - ✅ Success: Fiction removed from list
+
+7. **Test Authorization**
+   - Register a second user (different email)
+   - Login with second user
+   - Notice: Can't edit/delete first user's fictions
+   - ✅ Success: Authorization working!
+
+8. **Logout**
+   - Click "Logout"
+   - ✅ Success: Redirects to login page
+
+---
+
+### Swagger UI Demo (API Testing)
+
+**Access:**
+- Local: `http://localhost:3000/api/docs`
+- AWS: `http://$APP_URL/api/docs`
+
+**Complete API Demo Flow:**
+
+1. **Register User**
+   - Expand: `POST /api/auth/register`
+   - Click: "Try it out"
+   - Fill:
+     ```json
+     {
+       "username": "demo",
+       "email": "demo@example.com",
+       "password": "test123"
+     }
+     ```
+   - Click: "Execute"
+   - ✅ Success: Returns user object + token
+
+2. **Login**
+   - Expand: `POST /api/auth/login`
+   - Click: "Try it out"
+   - Fill:
+     ```json
+     {
+       "email": "demo@example.com",
+       "password": "test123"
+     }
+     ```
+   - Click: "Execute"
+   - **Copy the token from response**
+
+3. **Authorize**
+   - Click: 🔓 "Authorize" button (top right)
+   - Paste token in "Value" field
+   - Click: "Authorize"
+   - Click: "Close"
+   - ✅ Success: Now authenticated!
+
+4. **Create Fiction**
+   - Expand: `POST /api/fictions/`
+   - Click: "Try it out"
+   - Fill:
+     ```json
+     {
+       "title": "Test Story",
+       "author": "Demo Author",
+       "genre": "fantasy",
+       "description": "A test fiction",
+       "content": "Once upon a time..."
+     }
+     ```
+   - Click: "Execute"
+   - ✅ Success: Returns fiction with ID
+
+5. **Get All Fictions**
+   - Expand: `GET /api/fictions/`
+   - Click: "Try it out" → "Execute"
+   - ✅ Success: Returns list with your fiction
+
+6. **Update Fiction**
+   - Expand: `PUT /api/fictions/{id}`
+   - Enter the fiction ID from step 4
+   - Click: "Try it out"
+   - Modify any field
+   - Click: "Execute"
+   - ✅ Success: Fiction updated
+
+7. **Delete Fiction**
+   - Expand: `DELETE /api/fictions/{id}`
+   - Enter fiction ID
+   - Click: "Try it out" → "Execute"
+   - ✅ Success: Fiction deleted
+
+---
+
+### Rate Limiting Demo
+
+**The API enforces 100 requests per 15 minutes per IP**
+
+**Check Rate Limit Headers:**
+
+```bash
+# Local
+curl -I http://localhost:3000/health | grep -i ratelimit
+
+# AWS
+curl -I http://$APP_URL/health | grep -i ratelimit
+```
+
+**Expected Response Headers:**
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: <timestamp>
+```
+
+**Test Rate Limiting Behavior:**
+
+| Requests | Status | Response |
+|----------|--------|----------|
+| 1-100 | ✅ Success | 200 OK |
+| 101+ | ❌ Blocked | 429 Too Many Requests |
+| After 15 min | ✅ Reset | Counter resets to 0 |
+
+**Trigger Rate Limit (Demo):**
+
+```bash
+# Make 101 rapid requests
+for i in {1..101}; do
+  echo "Request $i"
+  curl -s http://localhost:3000/health > /dev/null  # or use $APP_URL for AWS
+done
+
+# Next request will fail with 429
+curl -v http://localhost:3000/health  # or $APP_URL
+# Expected: HTTP 429 Too Many Requests
+```
 
 ---
 
@@ -933,20 +1136,31 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" ...
 
 ## 🎯 Key Highlights
 
-**Technologies:** React, Python, FastAPI, MongoDB, Docker, Kubernetes, Terraform, AWS EKS, ALB, Ingress
+**Full Stack**
+- React SPA frontend + FastAPI backend
+- RESTful API with JWT authentication & rate limiting
+- MongoDB database with async driver
+- Interactive Swagger UI documentation
 
-**What This Demonstrates:**
-- ✅ **Full-Stack Development:** React frontend + FastAPI backend
-- ✅ **RESTful API** with JWT authentication & rate limiting
-- ✅ **Modern Architecture:** Microservices with path-based routing (Ingress)
-- ✅ **Containerization:** Multi-stage Docker builds (2 services)
-- ✅ **Kubernetes Orchestration:** Deployments, Services, Ingress, HPA
-- ✅ **Infrastructure as Code:** Terraform for AWS resources
-- ✅ **AWS Cloud Deployment:** EKS, ECR (2 repos), VPC, ALB
-- ✅ **Auto-scaling & HA:** Horizontal Pod Autoscaler + Cluster Autoscaler
-- ✅ **Security Best Practices:** Private subnets, security groups, IAM, secrets management
-- ✅ **DevOps Excellence:** CI/CD ready, monorepo structure, automated scripts
+**Cloud & Kubernetes**
+- Deployed on AWS EKS behind an internet-facing ALB
+- Kubernetes Deployments, Services, Ingress, and HPA
+- Path-based routing (Ingress Controller) for frontend + backend
+- Horizontal Pod Autoscaler + Cluster Autoscaler for high availability
+
+**DevOps & IaC**
+- Multi-stage Docker builds (2 images: frontend + backend)
+- Terraform for VPC, EKS, ECR, ALB, and AWS Load Balancer Controller
+- GitHub Actions CI/CD: validate → build → deploy infrastructure → deploy apps
+- Automated testing scripts + health check endpoints
+
+**Security & Reliability**
+- Private subnets for EKS nodes, public subnets for ALB
+- Security groups with least-privilege access
+- IAM roles for service accounts (IRSA)
+- Kubernetes Secrets for sensitive data
+- Rate limiting (100 req/15 min) to prevent API abuse
 
 ---
 
-**Ready to deploy?** Start with [Approach 1: Local Development](#approach-1-local-development--testing)! 🚀
+**Ready to deploy?** Start with [Approach 1: Local Development](#approach-1-local-development)! 🚀
