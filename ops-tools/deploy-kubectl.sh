@@ -32,7 +32,7 @@ if ! kubectl cluster-info &>/dev/null; then
     echo -e "${RED}❌ kubectl is not configured to access a cluster${NC}"
     echo ""
     echo "Please configure kubectl first:"
-    echo "  aws eks update-kubeconfig --region us-east-1 --name fictions-api-development"
+    echo "  aws eks update-kubeconfig --region us-east-1 --name fictions-api"
     exit 1
 fi
 
@@ -54,19 +54,19 @@ kubectl get nodes
 echo ""
 
 # ============================================================================
-# Step 3: Check if deployment.yaml has ECR URL
+# Step 3: Check if backend deployment has ECR URL
 # ============================================================================
 echo -e "${YELLOW}3️⃣  Checking deployment configuration...${NC}"
-if grep -q "<YOUR_ECR_REPO_URL>" "$KUBECTL_DIR/deployment.yaml"; then
-    echo -e "${RED}❌ deployment.yaml still has placeholder ECR URL${NC}"
+if grep -q "<YOUR_ECR_REPO_URL>" "$KUBECTL_DIR/backend-deployment.yaml"; then
+    echo -e "${RED}❌ backend-deployment.yaml still has placeholder ECR URL${NC}"
     echo ""
-    echo "Please update the image URL in kubernetes/deployment.yaml:"
+    echo "Please update the image URL in kubernetes/backend-deployment.yaml:"
     echo "  1. Get ECR URL: terraform output ecr_repository_url"
     echo "  2. Replace <YOUR_ECR_REPO_URL> with your actual ECR URL"
     echo ""
     exit 1
 fi
-echo -e "${GREEN}✅ deployment.yaml is configured${NC}"
+echo -e "${GREEN}✅ backend-deployment.yaml is configured${NC}"
 echo ""
 
 # ============================================================================
@@ -106,11 +106,16 @@ echo -e "${YELLOW}⏳ Waiting for MongoDB to be ready...${NC}"
 kubectl wait --for=condition=ready pod -l app=mongodb -n $NAMESPACE --timeout=120s || true
 
 echo ""
-echo "📦 Deploying API application..."
-kubectl apply -f "$KUBECTL_DIR/deployment.yaml"
+echo "📦 Deploying Backend API..."
+kubectl apply -f "$KUBECTL_DIR/backend-deployment.yaml"
+kubectl apply -f "$KUBECTL_DIR/backend-service.yaml"
 
-echo "📦 Creating LoadBalancer service..."
-kubectl apply -f "$KUBECTL_DIR/service.yaml"
+echo "📦 Deploying Frontend..."
+kubectl apply -f "$KUBECTL_DIR/frontend-deployment.yaml"
+kubectl apply -f "$KUBECTL_DIR/frontend-service.yaml"
+
+echo "📦 Creating Ingress (ALB)..."
+kubectl apply -f "$KUBECTL_DIR/ingress.yaml"
 
 echo "📦 Creating HPA (Horizontal Pod Autoscaler)..."
 kubectl apply -f "$KUBECTL_DIR/hpa.yaml"
@@ -134,20 +139,20 @@ kubectl get pods -n $NAMESPACE
 echo ""
 
 # ============================================================================
-# Step 7: Get LoadBalancer URL
+# Step 7: Get ALB URL from Ingress
 # ============================================================================
-echo -e "${YELLOW}7️⃣  Getting LoadBalancer URL...${NC}"
+echo -e "${YELLOW}7️⃣  Getting Application Load Balancer URL...${NC}"
 echo ""
-echo "⏳ Waiting for LoadBalancer to provision (this may take 2-3 minutes)..."
+echo "⏳ Waiting for ALB to provision via Ingress (this may take 2-3 minutes)..."
 echo ""
 
-# Wait for LoadBalancer to get an external IP
+# Wait for Ingress to get an ALB hostname
 MAX_WAIT=180  # 3 minutes
 WAITED=0
 while [ $WAITED -lt $MAX_WAIT ]; do
-    EXTERNAL_IP=$(kubectl get svc fictions-api -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+    ALB_URL=$(kubectl get ingress fictions-app-ingress -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
     
-    if [ -n "$EXTERNAL_IP" ] && [ "$EXTERNAL_IP" != "<pending>" ]; then
+    if [ -n "$ALB_URL" ]; then
         break
     fi
     
@@ -159,31 +164,35 @@ done
 echo ""
 echo ""
 
-if [ -z "$EXTERNAL_IP" ] || [ "$EXTERNAL_IP" == "<pending>" ]; then
-    echo -e "${YELLOW}⚠️  LoadBalancer is still provisioning${NC}"
+if [ -z "$ALB_URL" ]; then
+    echo -e "${YELLOW}⚠️  ALB is still provisioning${NC}"
     echo ""
     echo "Check status with:"
-    echo "  kubectl get svc fictions-api -n $NAMESPACE -w"
+    echo "  kubectl get ingress fictions-app-ingress -n $NAMESPACE -w"
 else
-    echo -e "${GREEN}✅ LoadBalancer is ready!${NC}"
+    echo -e "${GREEN}✅ ALB is ready!${NC}"
     echo ""
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}🎉 Deployment Complete!${NC}"
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo -e "${YELLOW}📍 API Endpoints:${NC}"
+    echo -e "${YELLOW}📍 Application URLs:${NC}"
     echo ""
-    echo "   Health:    http://$EXTERNAL_IP/health"
-    echo "   API Docs:  http://$EXTERNAL_IP/docs"
-    echo "   API Base:  http://$EXTERNAL_IP/api"
+    echo "   Frontend:  http://$ALB_URL"
+    echo "   Backend:   http://$ALB_URL/api"
+    echo "   Health:    http://$ALB_URL/health"
+    echo "   API Docs:  http://$ALB_URL/api/docs"
     echo ""
     echo -e "${YELLOW}🧪 Test Commands:${NC}"
     echo ""
-    echo "   # Test health"
-    echo "   curl http://$EXTERNAL_IP/health"
+    echo "   # Test backend health"
+    echo "   curl http://$ALB_URL/health"
     echo ""
-    echo "   # Open API docs in browser"
-    echo "   open http://$EXTERNAL_IP/docs"
+    echo "   # Open frontend in browser"
+    echo "   open http://$ALB_URL"
+    echo ""
+    echo "   # Open API docs"
+    echo "   open http://$ALB_URL/api/docs"
     echo ""
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 fi

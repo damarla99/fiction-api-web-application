@@ -24,8 +24,13 @@ output "region" {
 }
 
 output "ecr_repository_url" {
-  description = "ECR repository URL"
+  description = "Backend ECR repository URL"
   value       = aws_ecr_repository.main.repository_url
+}
+
+output "frontend_ecr_repository_url" {
+  description = "Frontend ECR repository URL"
+  value       = aws_ecr_repository.frontend.repository_url
 }
 
 output "configure_kubectl" {
@@ -33,9 +38,9 @@ output "configure_kubectl" {
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
 
-output "load_balancer_hostname" {
-  description = "Load Balancer hostname (available after deployment)"
-  value       = "Run: kubectl get svc fictions-api -n fictions-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+output "alb_hostname" {
+  description = "ALB hostname (available after Ingress deployment)"
+  value       = "Run: kubectl get ingress fictions-app-ingress -n fictions-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
 }
 
 output "vpc_id" {

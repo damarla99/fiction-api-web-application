@@ -32,24 +32,26 @@ A full-stack containerized web application demonstrating modern DevOps practices
 
 ## 🚀 Features
 
-- ✅ RESTful API with CRUD operations for fictions
-- ✅ JWT authentication with bcrypt password hashing
-- ✅ Rate limiting (100 requests/15 min)
-- ✅ MongoDB with async driver (Motor)
-- ✅ Auto-generated API docs (Swagger UI)
-- ✅ Docker containerization
-- ✅ Kubernetes orchestration on AWS EKS
-- ✅ Infrastructure as Code (Terraform)
-- ✅ Auto-scaling (HPA + Cluster Autoscaler)
-- ✅ Network Load Balancer (internet-facing)
-- ✅ CI/CD ready with GitHub Actions
+- ✅ **Full-Stack Application:** React frontend + FastAPI backend
+- ✅ **RESTful API:** CRUD operations for fictions
+- ✅ **Web UI:** Interactive React interface with routing
+- ✅ **Authentication:** JWT with bcrypt password hashing
+- ✅ **Rate Limiting:** 100 requests/15 min (SlowAPI)
+- ✅ **Database:** MongoDB with async driver (Motor)
+- ✅ **Containerization:** Multi-stage Docker builds (2 images)
+- ✅ **Kubernetes:** Orchestration on AWS EKS with Ingress
+- ✅ **Infrastructure as Code:** Terraform for AWS resources
+- ✅ **Auto-scaling:** HPA + Cluster Autoscaler
+- ✅ **Load Balancing:** ALB with path-based routing
+- ✅ **CI/CD:** GitHub Actions pipelines
 
 ---
 
 ## 🛠️ Tech Stack
 
+**Frontend:** React 18, Vite, React Router, Vanilla CSS  
 **Backend:** Python 3.11, FastAPI, MongoDB 7.0, Motor, JWT, bcrypt, Pydantic, SlowAPI  
-**Infrastructure:** AWS (EKS, ECR, VPC, NLB), Terraform, Kubernetes  
+**Infrastructure:** AWS (EKS, ECR, VPC, ALB), Terraform, Kubernetes, Ingress  
 **Tools:** Docker, kubectl, AWS CLI, GitHub Actions
 
 ---
@@ -70,29 +72,34 @@ graph TB
         subgraph VPC["VPC (10.0.0.0/16)"]
             subgraph PublicSubnets["Public Subnets (10.0.1-2.0/24)<br/>2 AZs"]
                 NAT[NAT Gateway<br/>Elastic IP<br/>Outbound Only]
-                NLB[Network Load Balancer<br/>Public Endpoint]
+                ALB[Application Load Balancer<br/>Internet-Facing<br/>Layer 7]
             end
             
             subgraph PrivateSubnets["Private Subnets (10.0.101-102.0/24)<br/>2 AZs"]
                 subgraph EKS["EKS Cluster (v1.31)"]
+                    Ingress[Kubernetes Ingress<br/>Path Routing<br/>'/' → Frontend<br/>'/api' → Backend]
                     subgraph WorkerNodes["Worker Nodes (EC2)<br/>1-2 t3.small<br/>Private IPs Only"]
                         subgraph Pods["Application Pods"]
-                            API[Fictions API<br/>FastAPI<br/>Auto-scaling 1-4 replicas]
-                            DB[MongoDB<br/>StatefulSet<br/>Ephemeral Storage<br/>Demo Use]
+                            Frontend[Frontend<br/>React + Nginx<br/>Replicas: 2]
+                            API[Backend API<br/>FastAPI<br/>Replicas: 1-4]
+                            DB[MongoDB<br/>StatefulSet<br/>Ephemeral Storage]
                         end
                     end
                 end
             end
         end
         
-        ECR[ECR<br/>Container Registry]
+        ECR[ECR Repositories<br/>Backend + Frontend<br/>Container Images]
         CloudWatch[CloudWatch<br/>Logs & Metrics]
         IAM[IAM Roles<br/>Permissions]
     end
     
     Users -->|HTTP| IGW
-    IGW --> NLB
-    NLB -->|NodePort| API
+    IGW --> ALB
+    ALB --> Ingress
+    Ingress -->|/| Frontend
+    Ingress -->|/api| API
+    Frontend -.API Calls.-> API
     API --> DB
     WorkerNodes -.->|OS Updates<br/>Docker Pulls| NAT
     NAT --> IGW
@@ -103,8 +110,10 @@ graph TB
     style Users fill:#e1f5ff
     style IGW fill:#ff9900
     style NAT fill:#ff9900
-    style NLB fill:#ff9900
+    style ALB fill:#4caf50
+    style Ingress fill:#2196f3
     style EKS fill:#326ce5
+    style Frontend fill:#61dafb
     style API fill:#009688
     style DB fill:#4caf50
     style ECR fill:#ff9900
@@ -116,34 +125,54 @@ graph TB
 
 - **VPC:** 10.0.0.0/16 across 2 Availability Zones (High Availability)
 - **Public Subnets:** 10.0.1.0/24, 10.0.2.0/24
-  - Internet-facing NLB (receives internet traffic)
+  - Internet-facing ALB (Application Load Balancer - Layer 7)
   - NAT Gateway (for private subnet outbound traffic)
   - Routes: 0.0.0.0/0 → Internet Gateway
 - **Private Subnets:** 10.0.101.0/24, 10.0.102.0/24
   - EKS worker nodes (private IPs only - no direct internet access)
-  - All application pods (FastAPI, MongoDB)
+  - All application pods (Frontend, Backend API, MongoDB)
+  - Kubernetes Ingress Controller (path-based routing)
   - Routes: 0.0.0.0/0 → NAT Gateway
 - **Internet Gateway:** Bi-directional internet access for public subnets
 - **NAT Gateway:** Outbound-only internet for private subnets (OS updates, Docker pulls)
 
 ### Traffic Flow
 
-**Inbound (User → API):**
+**Inbound (User → Frontend):**
 ```
-Internet Client (203.0.113.x)
+User's Web Browser
   ↓
 Internet Gateway
   ↓
-NLB in Public Subnet (10.0.1.x)
-  ↓ (preserves client IP)
-Worker Node in Private Subnet (10.0.101.x)
+ALB in Public Subnet (10.0.1.x)
+  ↓ Layer 7 routing based on path
+Kubernetes Ingress Controller
+  ↓ Path: "/"
+Frontend Pod (Nginx, port 80)
+  ↓ JavaScript API calls to "/api"
+Backend API Pod (FastAPI, port 3000)
   ↓
-NodePort Service (30000-32767)
-  ↓
-FastAPI Pod (port 3000)
+MongoDB Pod
 ```
 
-**Key Point:** NLB is Layer 4 (preserves source IP), so worker node security group sees the actual client IP, not NLB IP.
+**Inbound (Direct API Access):**
+```
+API Client
+  ↓
+Internet Gateway
+  ↓
+ALB in Public Subnet (10.0.1.x)
+  ↓ Layer 7 routing based on path
+Kubernetes Ingress Controller
+  ↓ Path: "/api/*"
+Backend API Pod (FastAPI, port 3000)
+  ↓
+MongoDB Pod
+```
+
+**Key Point:** ALB is Layer 7 (Application Load Balancer) with intelligent path-based routing. The Ingress Controller routes:
+- `/` → Frontend Service → Frontend Pods
+- `/api/*` → Backend Service → Backend API Pods
 
 **Outbound (Nodes → Internet):**
 ```
@@ -222,31 +251,51 @@ cd webapp-devops
 
 **Expected output:**
 ```
-✅ MongoDB is running on port 27017
-✅ API is running on port 3000
-✅ Health check passed: {"status":"ok",...}
+🌐 FULL-STACK APPLICATION:
+   Frontend (React UI):     http://localhost
+   Backend API (FastAPI):   http://localhost:3000
+   Database (MongoDB):      localhost:27017
 ```
 
-#### **Step 3: Test Application**
+**What's Running:**
+- 🎨 **Frontend** - React UI on port 80
+- ⚚ **Backend** - FastAPI on port 3000  
+- 🗄️ **MongoDB** - Database on port 27017
 
-**Recommended: Swagger UI (Interactive)**
+#### **Step 3: Access & Test**
 
-1. Open in browser: **http://localhost:3000/api/docs**
-2. Try the endpoints:
-   - Click `POST /api/auth/register` → "Try it out"
-   - Use example: `{"username": "test", "email": "test@example.com", "password": "test123"}`
-   - Click "Execute"
-   - Copy the `token` from response
-   - Click `POST /api/fictions/` → "Try it out" → Paste token in "Authorize" button
-   - Test creating fictions!
+**Option A: Full-Stack UI (Recommended)**
 
-**Or: Automated Test Script**
+```bash
+# Open frontend in browser
+open http://localhost
+# Or manually navigate to: http://localhost
+```
+
+**Test Flow:**
+1. **Register** - Create account (username, email, password)
+2. **Login** - Sign in with credentials
+3. **Create Fiction** - Fill form (title, author, genre, description, content)
+4. **View List** - See all fictions
+5. **Edit Your Fiction** - Click Edit (only on your stories)
+6. **Delete** - Remove a fiction
+
+**Option B: Backend API Only (Swagger UI)**
+
+```bash
+# Open Swagger UI
+open http://localhost:3000/api/docs
+```
+
+Interactive API testing in browser - no curl needed!
+
+**Option C: Automated Testing**
 
 ```bash
 ./dev-tools/test-api.sh
 ```
 
-**Expected output:**
+**Expected:**
 ```
 ✅ Health check passed
 ✅ User registered
@@ -255,11 +304,67 @@ cd webapp-devops
 ✅ Fiction retrieved
 ```
 
-#### **Step 4: Stop Application**
+**Option D: Manual curl Testing**
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Register
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","email":"test@example.com","password":"test123"}'
+
+# Login (copy token from response)
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test123"}'
+
+# Use token for authenticated requests
+export TOKEN="paste-token-here"
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/fictions/
+```
+
+#### **Step 4: View Logs (Optional)**
+
+```bash
+# All services
+docker-compose logs -f
+
+# Frontend only
+docker-compose logs -f frontend
+
+# Backend only
+docker-compose logs -f api
+
+# MongoDB only
+docker-compose logs -f mongodb
+```
+
+#### **Step 5: Stop Application**
 
 ```bash
 ./dev-tools/stop-local.sh
 ```
+
+**Clean Restart (Remove all data):**
+```bash
+docker-compose down -v
+./dev-tools/start-local.sh
+```
+
+---
+
+**🎯 Quick Reference - Local URLs:**
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Frontend UI** | http://localhost | React web application |
+| **Backend API** | http://localhost:3000 | FastAPI REST API |
+| **Swagger UI** | http://localhost:3000/api/docs | Interactive API docs |
+| **Health Check** | http://localhost:3000/health | API health status |
+| **MongoDB** | localhost:27017 | Database (internal) |
 
 ---
 
@@ -299,7 +404,7 @@ terraform apply
 Apply complete! Resources: 50+ added, 0 changed, 0 destroyed.
 ```
 
-#### **Step 3: Connect to EKS & Deploy Application**
+#### **Step 3: Connect to EKS**
 
 ```bash
 # Connect kubectl to EKS
@@ -308,94 +413,134 @@ aws eks update-kubeconfig --region us-east-1 --name fictions-api
 # Verify connection
 kubectl get nodes
 # Expected: 1-2 nodes in "Ready" status
+```
 
-# Get AWS account ID and ECR URL
+#### **Step 4: Build & Push Backend**
+
+```bash
+# Get AWS account ID
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export ECR_URL="${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/fictions-api-development"
+export BACKEND_ECR="${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/fictions-api-development"
 
 # Login to ECR
 aws ecr get-login-password --region us-east-1 | \
   docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
 
-# Build and push image
-docker build -t fictions-api .
-docker tag fictions-api:latest ${ECR_URL}:latest
-docker push ${ECR_URL}:latest
+# Build and push backend
+docker build -t backend ./backend
+docker tag backend:latest ${BACKEND_ECR}:latest
+docker push ${BACKEND_ECR}:latest
+```
 
-# Update deployment with ECR image
-cd ../kubernetes
-sed -i.bak "s|image:.*|image: ${ECR_URL}:latest|g" deployment.yaml
-rm deployment.yaml.bak
+#### **Step 5: Build & Push Frontend**
 
-# Deploy all Kubernetes resources
-kubectl apply -f kubernetes/namespace.yaml
-kubectl apply -f kubernetes/configmap.yaml
-kubectl apply -f kubernetes/secrets.yaml
-kubectl apply -f kubernetes/mongodb.yaml
-kubectl apply -f kubernetes/deployment.yaml
-kubectl apply -f kubernetes/service.yaml
-kubectl apply -f kubernetes/hpa.yaml
+```bash
+export FRONTEND_ECR="${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/fictions-api-frontend-development"
 
-# Wait for pods to be ready (1-2 minutes)
+# Build and push frontend
+docker build -t frontend ./frontend
+docker tag frontend:latest ${FRONTEND_ECR}:latest
+docker push ${FRONTEND_ECR}:latest
+```
+
+#### **Step 6: Update Deployment Files**
+
+```bash
+# Update backend deployment
+cd kubernetes
+sed -i.bak "s|image:.*|image: ${BACKEND_ECR}:latest|" backend-deployment.yaml
+rm -f backend-deployment.yaml.bak
+
+# Update frontend deployment
+sed -i.bak "s|image:.*|image: ${FRONTEND_ECR}:latest|" frontend-deployment.yaml
+rm -f frontend-deployment.yaml.bak
+```
+
+#### **Step 7: Deploy to Kubernetes**
+
+```bash
+# Deploy all resources
+kubectl apply -f namespace.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f secrets.yaml
+kubectl apply -f mongodb.yaml
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f backend-service.yaml
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f frontend-service.yaml
+kubectl apply -f ingress.yaml
+kubectl apply -f hpa.yaml
+
+# Wait for pods (2-3 minutes)
 kubectl wait --for=condition=ready pod -l app=fictions-api -n fictions-app --timeout=300s
+kubectl wait --for=condition=ready pod -l app=frontend -n fictions-app --timeout=300s
 kubectl wait --for=condition=ready pod -l app=mongodb -n fictions-app --timeout=300s
 ```
 
-**Expected output:**
-```
-pod/fictions-api-xxx condition met
-pod/mongodb-0 condition met
-```
+**Expected:** All pods in "Running" status
 
-#### **Step 4: Get API URL**
+#### **Step 4: Get Application URL**
 
 ```bash
-# Wait for LoadBalancer (2-3 minutes)
-echo "Waiting for LoadBalancer..."
+# Wait for ALB (2-3 minutes)
+echo "Waiting for ALB to provision..."
 sleep 120
 
-# Get the URL
-export API_URL=$(kubectl get svc fictions-api -n fictions-app \
+# Get ALB URL from Ingress
+export APP_URL=$(kubectl get ingress fictions-app-ingress -n fictions-app \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-echo "✅ API URL: http://$API_URL"
-echo "✅ Swagger UI: http://$API_URL/api/docs"
+echo "✅ Frontend:    http://$APP_URL"
+echo "✅ Backend API: http://$APP_URL/api"
+echo "✅ Swagger UI:  http://$APP_URL/api/docs"
 
 # Test
-curl http://$API_URL/health
+curl http://$APP_URL/health
 ```
 
-**Expected output:**
+**Expected:**
 ```json
 {"status":"ok","app":"Fictions API","version":"1.0.0"}
 ```
 
 #### **Step 5: Test on AWS**
 
-**Swagger UI (Easiest):**
+**Option A: Frontend UI (Full Experience)**
 
 ```bash
-echo "Open: http://$API_URL/api/docs"
+# Open frontend in browser
+open http://$APP_URL
 ```
 
-**curl Test:**
+Test the complete flow:
+1. Register a user
+2. Login
+3. Create fictions
+4. Edit/Delete your fictions
+
+**Option B: Swagger UI (API Testing)**
 
 ```bash
-# Health
-curl http://$API_URL/health
+# Open Swagger UI
+open http://$APP_URL/api/docs
+```
+
+**Option C: curl Commands**
+
+```bash
+# Health check
+curl http://$APP_URL/health
 
 # Register
-curl -X POST http://$API_URL/api/auth/register \
+curl -X POST http://$APP_URL/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username":"demo","email":"demo@example.com","password":"test123"}'
 
-# Login (copy the token from response)
-curl -X POST http://$API_URL/api/auth/login \
+# Login
+curl -X POST http://$APP_URL/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"demo@example.com","password":"test123"}'
 ```
-
-**Expected:** You get a `token` in the response. Use it in Swagger UI or curl to test fictions CRUD.
 
 #### **Step 6: Cleanup (Destroy to Save Costs)**
 
@@ -409,7 +554,7 @@ terraform destroy
 # Type 'yes' when prompted
 ```
 
-**💰 Cost saved!** Infrastructure destroyed, $0 AWS charges.
+**💰 Cost saved!** All AWS resources destroyed.
 
 ---
 
@@ -458,7 +603,7 @@ git push origin main
 
 **Expected:** Green checkmarks on all jobs, "🚀 Deployment Successful!" message
 
-#### **Step 4: Get API URL & Test**
+#### **Step 4: Get Application URL & Test**
 
 After deployment completes:
 
@@ -466,19 +611,23 @@ After deployment completes:
 # Connect to EKS
 aws eks update-kubeconfig --region us-east-1 --name fictions-api
 
-# Get URL
-export API_URL=$(kubectl get svc fictions-api -n fictions-app \
+# Get ALB URL from Ingress
+export APP_URL=$(kubectl get ingress fictions-app-ingress -n fictions-app \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-echo "Swagger UI: http://$API_URL/api/docs"
+echo "Frontend:   http://$APP_URL"
+echo "Backend:    http://$APP_URL/api"
+echo "Swagger UI: http://$APP_URL/api/docs"
 
 # Test
-curl http://$API_URL/health
+curl http://$APP_URL/health
 ```
 
-**Or:** Check the GitHub Actions workflow output for the API URL!
+**Or:** Check the GitHub Actions workflow output for the URL!
 
-**Test in browser:** Open `http://$API_URL/api/docs` → Test all endpoints
+**Test in browser:** 
+- Open `http://$APP_URL` → Full React UI
+- Or `http://$APP_URL/api/docs` → Swagger API testing
 
 #### **Step 5: Destroy (Save Costs)**
 
@@ -607,52 +756,75 @@ For detailed examples and interactive testing, use the **Swagger UI** at `/api/d
 ## 📁 Project Structure
 
 ```
-webapp-devops/
-├── src/                          # Python application source code
-│   ├── main.py                   # FastAPI application entry point
-│   ├── config/                   # Configuration (settings, database)
-│   ├── models/                   # Pydantic models (User, Fiction)
-│   ├── routers/                  # API route handlers
-│   ├── middleware/               # Auth, rate limiting
-│   └── utils/                    # Utility functions (password hashing)
+webapp-devops/                    # Monorepo (Frontend + Backend + Infrastructure)
+│
+├── backend/                      # Backend application (Python/FastAPI)
+│   ├── src/                     # Application source code
+│   │   ├── main.py              # FastAPI entry point
+│   │   ├── config/              # Settings, database
+│   │   ├── models/              # Pydantic models (User, Fiction)
+│   │   ├── routers/             # API endpoints (auth, fictions)
+│   │   ├── middleware/          # Auth, rate limiting
+│   │   └── utils/               # Password hashing
+│   ├── Dockerfile               # Backend Docker build
+│   ├── requirements.txt         # Python dependencies
+│   └── README.md                # Backend documentation
+│
+├── frontend/                     # Frontend application (React)
+│   ├── src/                     # React source code
+│   │   ├── App.jsx              # Main app component
+│   │   ├── components/          # React components
+│   │   │   ├── Login.jsx        # Auth UI
+│   │   │   ├── Fictions.jsx     # Main page
+│   │   │   ├── FictionForm.jsx  # Create/Edit form
+│   │   │   └── ...
+│   │   ├── services/            # API client
+│   │   └── index.css            # Styles
+│   ├── Dockerfile               # Frontend Docker build (Nginx)
+│   ├── package.json             # npm dependencies
+│   └── README.md                # Frontend documentation
 │
 ├── infrastructure/               # Infrastructure as Code
 │   └── terraform-eks/           # Terraform for AWS EKS
-│       ├── backend.tf           # Terraform backend configuration
+│       ├── backend.tf           # Terraform backend (S3 state)
 │       ├── provider.tf          # AWS, Kubernetes, Helm providers
-│       ├── main.tf              # Data sources
 │       ├── vpc.tf               # VPC, subnets, gateways
-│       ├── eks.tf               # EKS cluster
-│       ├── ecr.tf               # Container registry
-│       ├── addons.tf            # EKS add-ons (Load Balancer, Metrics, Autoscaler)
-│       ├── secrets.tf           # Secrets management
+│       ├── eks.tf               # EKS cluster configuration
+│       ├── ecr.tf               # 2 ECR repos (backend + frontend)
+│       ├── addons.tf            # Load Balancer Controller, Metrics, Autoscaler
 │       ├── variables.tf         # Input variables
-│       └── outputs.tf           # Output values
+│       └── outputs.tf           # ECR URLs, cluster info
 │
 ├── kubernetes/                   # Kubernetes manifests
-│   ├── namespace.yaml           # Namespace definition
-│   ├── configmap.yaml           # Application configuration
-│   ├── secrets.yaml             # Sensitive data (JWT, MongoDB URI)
-│   ├── mongodb.yaml             # MongoDB StatefulSet + Service
-│   ├── deployment.yaml          # API Deployment
-│   ├── service.yaml             # LoadBalancer Service
+│   ├── namespace.yaml           # fictions-app namespace
+│   ├── configmap.yaml           # App configuration
+│   ├── secrets.yaml             # JWT, MongoDB credentials
+│   ├── mongodb.yaml             # MongoDB StatefulSet
+│   ├── backend-deployment.yaml  # Backend API deployment
+│   ├── backend-service.yaml     # Backend service (ClusterIP)
+│   ├── frontend-deployment.yaml # Frontend deployment
+│   ├── frontend-service.yaml    # Frontend service (ClusterIP)
+│   ├── ingress.yaml             # ALB Ingress (path routing)
 │   ├── hpa.yaml                 # Horizontal Pod Autoscaler
-│   └── kustomization.yaml       # Kustomize configuration
+│   └── kustomization.yaml       # Kustomize config
 │
 ├── ops-tools/                    # DevOps automation scripts
-│   ├── build-and-push.sh        # Build & push Docker image to ECR
-│   ├── update-k8s-image.sh      # Update deployment with ECR URL
-│   └── deploy-kubectl.sh        # Deploy application to Kubernetes
+│   ├── build-and-push.sh        # Build & push backend to ECR
+│   ├── build-and-push-frontend.sh # Build & push frontend to ECR
+│   ├── update-k8s-image.sh      # Update K8s deployments
+│   └── deploy-kubectl.sh        # Deploy to Kubernetes
 │
-├── dev-tools/                    # Development tools
-│   ├── start-local.sh           # Start local Docker environment
+├── dev-tools/                    # Developer tools
+│   ├── start-local.sh           # Start Docker Compose
 │   ├── stop-local.sh            # Stop local environment
 │   └── test-api.sh              # Test API endpoints
 │
-├── Dockerfile                    # Multi-stage Docker build
-├── docker-compose.yml            # Local development setup
-├── requirements.txt              # Python dependencies
-└── README.md                     # This file - Complete documentation
+├── .github/workflows/            # CI/CD pipelines
+│   ├── ci.yml                   # Build, test, deploy
+│   └── pr.yml                   # PR validation
+│
+├── docker-compose.yml            # Local dev (backend + frontend + MongoDB)
+└── README.md                     # Complete documentation
 ```
 
 ---
@@ -670,10 +842,11 @@ webapp-devops/
 - ✅ **NAT Gateway:** Outbound-only internet for updates
 - ✅ **Security Groups:** 
   - Control Plane: Protects Kubernetes API server
-  - Worker Nodes: NodePort range (30000-32767) from 0.0.0.0/0 for NLB
-  - NLB: Layer 4 (no security group, preserves client IP)
-- ✅ **IAM Roles:** Least privilege for EKS, worker nodes, load balancer, autoscaler
+  - Worker Nodes: Controlled access from ALB
+  - ALB: Layer 7 load balancing with path-based routing
+- ✅ **IAM Roles:** Least privilege for EKS, worker nodes, load balancer controller, autoscaler
 - ✅ **VPC Isolation:** Network segregation across 2 AZs
+- ✅ **Kubernetes Ingress:** Path-based routing isolates frontend and backend traffic
 
 ---
 
@@ -760,15 +933,19 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" ...
 
 ## 🎯 Key Highlights
 
-**Technologies:** Python, FastAPI, MongoDB, Docker, Kubernetes, Terraform, AWS EKS
+**Technologies:** React, Python, FastAPI, MongoDB, Docker, Kubernetes, Terraform, AWS EKS, ALB, Ingress
 
 **What This Demonstrates:**
-- ✅ RESTful API with JWT authentication & rate limiting
-- ✅ Containerization & orchestration (Docker, Kubernetes)
-- ✅ Infrastructure as Code (Terraform)
-- ✅ AWS cloud deployment (EKS, VPC, Load Balancer)
-- ✅ Auto-scaling & high availability
-- ✅ Security best practices (private subnets, security groups, IAM)
+- ✅ **Full-Stack Development:** React frontend + FastAPI backend
+- ✅ **RESTful API** with JWT authentication & rate limiting
+- ✅ **Modern Architecture:** Microservices with path-based routing (Ingress)
+- ✅ **Containerization:** Multi-stage Docker builds (2 services)
+- ✅ **Kubernetes Orchestration:** Deployments, Services, Ingress, HPA
+- ✅ **Infrastructure as Code:** Terraform for AWS resources
+- ✅ **AWS Cloud Deployment:** EKS, ECR (2 repos), VPC, ALB
+- ✅ **Auto-scaling & HA:** Horizontal Pod Autoscaler + Cluster Autoscaler
+- ✅ **Security Best Practices:** Private subnets, security groups, IAM, secrets management
+- ✅ **DevOps Excellence:** CI/CD ready, monorepo structure, automated scripts
 
 ---
 

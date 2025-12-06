@@ -38,8 +38,11 @@ webapp-devops/
 │   │   ├── kubernetes.tf.disabled  # (Using kubectl instead)
 │   │   └── ...
 │   └── kubernetes/             # K8s manifests (kubectl)
-│       ├── deployment.yaml
-│       ├── service.yaml
+│       ├── backend-deployment.yaml
+│       ├── backend-service.yaml
+│       ├── frontend-deployment.yaml
+│       ├── frontend-service.yaml
+│       ├── ingress.yaml
 │       └── ...
 ├── ops-tools/                  # YOUR DEVOPS TOOLS
 │   ├── build-and-push.sh      # Build & push Docker image

@@ -23,7 +23,7 @@ services:
   # FastAPI Application
   app:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: fictions-api
     restart: unless-stopped
@@ -47,6 +47,27 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fictions-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    networks:
+      - fictions-network
+    environment:
+      - VITE_API_URL=http://app:3000
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   mongodb_data:

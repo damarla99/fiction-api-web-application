@@ -43,16 +43,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
           pip install flake8 black
 
       - name: Lint with flake8
         run: |
-          flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 src --count --max-complexity=10 --max-line-length=120 --statistics
+          flake8 backend/src --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 backend/src --count --max-complexity=10 --max-line-length=120 --statistics
 
       - name: Check code formatting with black
-        run: black --check src
+        run: black --check backend/src
 
       - name: Validate Terraform
         uses: hashicorp/setup-terraform@v3
@@ -80,9 +80,9 @@ jobs:
         working-directory: infrastructure/terraform-eks
         run: terraform validate
 
-  # Job 2: Build and Push Docker Image
-  build:
-    name: Build Docker Image
+  # Job 2: Build and Push Backend Image
+  build-backend:
+    name: Build Backend Image
     runs-on: ubuntu-latest
     needs: [validate, deploy-infra]  # Wait for Terraform to create ECR
     if: github.event.inputs.action != 'destroy'
@@ -105,7 +105,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Extract metadata for Docker
+      - name: Extract metadata for Backend Docker
         id: meta
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -114,26 +114,26 @@ jobs:
           echo "tags=${{ steps.login-ecr.outputs.registry }}/fictions-api-development:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           echo "latest=${{ steps.login-ecr.outputs.registry }}/fictions-api-development:latest" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image
+      - name: Build Backend Docker image
         run: |
-          docker build -t ${{ steps.meta.outputs.tags }} .
+          docker build -t ${{ steps.meta.outputs.tags }} ./backend
           docker tag ${{ steps.meta.outputs.tags }} ${{ steps.meta.outputs.latest }}
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner on Backend
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-backend-results.sarif'
           severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy scan results to GitHub Security
+      - name: Upload Backend Trivy scan results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: 'trivy-backend-results.sarif'
 
-      - name: Run Trivy vulnerability scanner (Table format)
+      - name: Run Trivy vulnerability scanner on Backend (Table format)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
@@ -141,15 +141,70 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '0'  # Don't fail the build, just report
 
-      - name: Push Docker image
+      - name: Push Backend Docker image
         run: |
           docker push ${{ steps.meta.outputs.tags }}
           docker push ${{ steps.meta.outputs.latest }}
 
-      - name: Image digest
-        run: echo "Image pushed with tag ${{ steps.meta.outputs.tags }}"
+      - name: Backend image digest
+        run: echo "Backend image pushed with tag ${{ steps.meta.outputs.tags }}"
 
-  # Job 3: Deploy Infrastructure with Terraform
+  # Job 3: Build and Push Frontend Image
+  build-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    needs: [validate, deploy-infra]  # Wait for Terraform to create ECR
+    if: github.event.inputs.action != 'destroy'
+    
+    outputs:
+      image-tag: ${{ steps.meta.frontend.outputs.tags }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract metadata for Frontend Docker
+        id: meta-frontend
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          IMAGE_TAG="${TIMESTAMP}-${SHORT_SHA}"
+          echo "tags=${{ steps.login-ecr.outputs.registry }}/fictions-api-frontend-development:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "latest=${{ steps.login-ecr.outputs.registry }}/fictions-api-frontend-development:latest" >> $GITHUB_OUTPUT
+
+      - name: Build Frontend Docker image
+        run: |
+          docker build -t ${{ steps.meta-frontend.outputs.tags }} ./frontend
+          docker tag ${{ steps.meta-frontend.outputs.tags }} ${{ steps.meta-frontend.outputs.latest }}
+
+      - name: Run Trivy vulnerability scanner on Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta-frontend.outputs.tags }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Push Frontend Docker image
+        run: |
+          docker push ${{ steps.meta-frontend.outputs.tags }}
+          docker push ${{ steps.meta-frontend.outputs.latest }}
+
+      - name: Frontend image digest
+        run: echo "Frontend image pushed with tag ${{ steps.meta-frontend.outputs.tags }}"
+
+  # Job 4: Deploy Infrastructure with Terraform
   deploy-infra:
     name: Deploy Infrastructure
     runs-on: ubuntu-latest
@@ -240,11 +295,11 @@ jobs:
           name: terraform-outputs
           path: infrastructure/terraform-eks/outputs.txt
 
-  # Job 4: Deploy to Kubernetes
+  # Job 5: Deploy to Kubernetes
   deploy-k8s:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
-    needs: [build, deploy-infra]
+    needs: [build-backend, build-frontend, deploy-infra]
     if: github.event.inputs.action != 'destroy'
     
     steps:
@@ -272,19 +327,33 @@ jobs:
       - name: Verify cluster connection
         run: kubectl get nodes
 
-      - name: Get ECR URL
-        id: ecr-url
+      - name: Get Backend ECR URL
+        id: backend-ecr
         run: |
-          ECR_URL=$(aws ecr describe-repositories \
+          BACKEND_ECR=$(aws ecr describe-repositories \
             --repository-names fictions-api-development \
             --region ${{ env.AWS_REGION }} \
             --query 'repositories[0].repositoryUri' \
             --output text)
-          echo "ecr_url=${ECR_URL}" >> $GITHUB_OUTPUT
+          echo "backend_ecr=${BACKEND_ECR}" >> $GITHUB_OUTPUT
 
-      - name: Update Kubernetes deployment with image
+      - name: Get Frontend ECR URL
+        id: frontend-ecr
         run: |
-          sed -i "s|image:.*|image: ${{ steps.ecr-url.outputs.ecr_url }}:latest|g" kubernetes/deployment.yaml
+          FRONTEND_ECR=$(aws ecr describe-repositories \
+            --repository-names fictions-api-frontend-development \
+            --region ${{ env.AWS_REGION }} \
+            --query 'repositories[0].repositoryUri' \
+            --output text)
+          echo "frontend_ecr=${FRONTEND_ECR}" >> $GITHUB_OUTPUT
+
+      - name: Update Backend deployment with image
+        run: |
+          sed -i "s|image:.*|image: ${{ steps.backend-ecr.outputs.backend_ecr }}:latest|g" kubernetes/backend-deployment.yaml
+
+      - name: Update Frontend deployment with image
+        run: |
+          sed -i "s|image:.*|image: ${{ steps.frontend-ecr.outputs.frontend_ecr }}:latest|g" kubernetes/frontend-deployment.yaml
 
       - name: Deploy to Kubernetes
         run: |
@@ -292,44 +361,51 @@ jobs:
           kubectl apply -f kubernetes/configmap.yaml
           kubectl apply -f kubernetes/secrets.yaml
           kubectl apply -f kubernetes/mongodb.yaml
-          kubectl apply -f kubernetes/deployment.yaml
-          kubectl apply -f kubernetes/service.yaml
+          kubectl apply -f kubernetes/backend-deployment.yaml
+          kubectl apply -f kubernetes/backend-service.yaml
+          kubectl apply -f kubernetes/frontend-deployment.yaml
+          kubectl apply -f kubernetes/frontend-service.yaml
+          kubectl apply -f kubernetes/ingress.yaml
           kubectl apply -f kubernetes/hpa.yaml
 
-      - name: Wait for deployment
+      - name: Wait for deployments
         run: |
           kubectl rollout status deployment/fictions-api -n fictions-app --timeout=300s
+          kubectl rollout status deployment/fictions-frontend -n fictions-app --timeout=300s
           kubectl rollout status statefulset/mongodb -n fictions-app --timeout=300s
 
-      - name: Get LoadBalancer URL
+      - name: Get ALB URL from Ingress
         id: get-url
         run: |
-          echo "Waiting for LoadBalancer to be ready..."
-          sleep 60
-          LB_URL=$(kubectl get svc fictions-api -n fictions-app \
+          echo "Waiting for ALB to be provisioned..."
+          sleep 90
+          ALB_URL=$(kubectl get ingress fictions-app-ingress -n fictions-app \
             -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-          echo "api_url=http://${LB_URL}" >> $GITHUB_OUTPUT
+          echo "app_url=http://${ALB_URL}" >> $GITHUB_OUTPUT
           echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**API URL:** http://${LB_URL}" >> $GITHUB_STEP_SUMMARY
-          echo "**Swagger UI:** http://${LB_URL}/api/docs" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend UI:** http://${ALB_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend API:** http://${ALB_URL}/api" >> $GITHUB_STEP_SUMMARY
+          echo "**Swagger UI:** http://${ALB_URL}/api/docs" >> $GITHUB_STEP_SUMMARY
 
       - name: Check application health
         run: |
-          echo "Waiting for application to be ready..."
+          echo "Verifying all pods are running..."
           sleep 30
           kubectl get pods -n fictions-app
+          kubectl get ingress -n fictions-app
           
       - name: Display deployment info
         run: |
           echo "==================================================="
-          echo "🎉 Deployment Complete!"
+          echo "🎉 Full-Stack Deployment Complete!"
           echo "==================================================="
-          echo "API URL: ${{ steps.get-url.outputs.api_url }}"
-          echo "Swagger UI: ${{ steps.get-url.outputs.api_url }}/api/docs"
+          echo "Frontend:   ${{ steps.get-url.outputs.app_url }}"
+          echo "Backend:    ${{ steps.get-url.outputs.app_url }}/api"
+          echo "Swagger UI: ${{ steps.get-url.outputs.app_url }}/api/docs"
           echo "==================================================="
 
-  # Job 5: Manual Approval for Destroy
+  # Job 6: Manual Approval for Destroy
   approval:
     name: Approve Destruction
     runs-on: ubuntu-latest
@@ -348,7 +424,7 @@ jobs:
           echo "  - ECR repositories"
           echo "  - All data will be LOST"
 
-  # Job 6: Destroy Kubernetes Resources
+  # Job 7: Destroy Kubernetes Resources
   destroy-k8s:
     name: Destroy Kubernetes Resources
     runs-on: ubuntu-latest
@@ -400,7 +476,7 @@ jobs:
           echo "Waiting for LoadBalancer to be deleted..."
           sleep 60
 
-  # Job 7: Destroy Infrastructure
+  # Job 8: Destroy Infrastructure
   destroy-infra:
     name: Destroy Infrastructure
     runs-on: ubuntu-latest
@@ -445,7 +521,7 @@ jobs:
           echo "- ✅ Load balancers removed" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ All data deleted" >> $GITHUB_STEP_SUMMARY
 
-  # Job 8: Cleanup ECR (optional)
+  # Job 9: Cleanup ECR (optional)
   cleanup-ecr:
     name: Cleanup ECR Images
     runs-on: ubuntu-latest

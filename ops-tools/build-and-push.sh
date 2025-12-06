@@ -65,7 +65,7 @@ echo ""
 echo -e "${YELLOW}3️⃣  Building Docker image...${NC}"
 cd ../../
 
-docker build -t fictions-api:$IMAGE_TAG .
+docker build -t fictions-api:$IMAGE_TAG ./backend
 
 echo -e "${GREEN}✅ Docker image built successfully${NC}"
 echo ""
@@ -109,7 +109,7 @@ echo "   Repository: $ECR_URL"
 echo "   Tag:        $IMAGE_TAG"
 echo ""
 echo -e "${YELLOW}Next Steps:${NC}"
-echo "   1. Update deployment.yaml (if needed):"
+echo "   1. Update backend-deployment.yaml (if needed):"
 echo "      cd ops-tools && ./update-k8s-image.sh"
 echo ""
 echo "   2. Deploy to Kubernetes:"

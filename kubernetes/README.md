@@ -27,8 +27,11 @@ This directory contains Kubernetes manifests for deploying the Fictions API to a
 | `secrets.yaml` | Secrets (JWT, MongoDB URI) - **DO NOT COMMIT REAL VALUES** |
 | `configmap.yaml` | Environment variables |
 | `mongodb.yaml` | MongoDB StatefulSet + Service |
-| `deployment.yaml` | Fictions API Deployment |
-| `service.yaml` | LoadBalancer Service (NLB on AWS) |
+| `backend-deployment.yaml` | Backend API Deployment |
+| `backend-service.yaml` | Backend Service (ClusterIP) |
+| `frontend-deployment.yaml` | Frontend Deployment |
+| `frontend-service.yaml` | Frontend Service (ClusterIP) |
+| `ingress.yaml` | ALB Ingress for path-based routing |
 | `hpa.yaml` | Horizontal Pod Autoscaler |
 
 ---
@@ -41,11 +44,11 @@ This directory contains Kubernetes manifests for deploying the Fictions API to a
 # 1. Have a Kubernetes cluster running
 kubectl cluster-info
 
-# 2. Have Docker image in a registry (ECR, Docker Hub, etc.)
-# Build and push image first
+# 2. Have Docker images in a registry (ECR, Docker Hub, etc.)
+# Build and push backend and frontend images first
 
-# 3. Update image URL in deployment.yaml
-# Replace <YOUR_ECR_REPO_URL> with your actual registry URL
+# 3. Update image URLs in deployment files
+# Replace placeholders with your actual registry URLs
 ```
 
 ### Deploy
@@ -63,11 +66,16 @@ kubectl apply -f kubernetes/configmap.yaml
 # 4. Deploy MongoDB
 kubectl apply -f kubernetes/mongodb.yaml
 
-# 5. Deploy API
-kubectl apply -f kubernetes/deployment.yaml
+# 5. Deploy Backend API
+kubectl apply -f kubernetes/backend-deployment.yaml
+kubectl apply -f kubernetes/backend-service.yaml
 
-# 6. Create service (Load Balancer)
-kubectl apply -f kubernetes/service.yaml
+# 6. Deploy Frontend
+kubectl apply -f kubernetes/frontend-deployment.yaml
+kubectl apply -f kubernetes/frontend-service.yaml
+
+# 7. Create Ingress (ALB)
+kubectl apply -f kubernetes/ingress.yaml
 
 # 7. Enable auto-scaling (optional)
 kubectl apply -f kubernetes/hpa.yaml
@@ -102,16 +110,26 @@ kubectl create secret generic app-secrets \
   -n fictions-app
 ```
 
-### Update Image URL
+### Update Image URLs
 
-**In `deployment.yaml`, replace:**
+**In `backend-deployment.yaml`, replace:**
 ```yaml
 image: <YOUR_ECR_REPO_URL>:latest
 ```
 
-**With your actual image:**
+**With your actual backend image:**
 ```yaml
-image: 123456789.dkr.ecr.us-east-1.amazonaws.com/fictions-api:latest
+image: 123456789.dkr.ecr.us-east-1.amazonaws.com/fictions-api-development:latest
+```
+
+**In `frontend-deployment.yaml`, replace:**
+```yaml
+image: <FRONTEND_ECR_URL>:latest
+```
+
+**With your actual frontend image:**
+```yaml
+image: 123456789.dkr.ecr.us-east-1.amazonaws.com/fictions-api-frontend-development:latest
 ```
 
 ---
@@ -244,14 +262,14 @@ storageClassName: standard  # GKE
 storageClassName: default   # Generic
 ```
 
-### Load Balancer
+### Ingress / Load Balancer
 
-Service uses AWS NLB annotation. For other clouds:
+Application uses AWS ALB Ingress Controller. For other clouds:
 
 ```yaml
-# Remove or change annotation in service.yaml:
-annotations:
-  service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+# Update ingress.yaml annotations for other cloud providers
+# GKE: Use GCE Ingress Controller
+# Azure: Use Azure Application Gateway Ingress Controller
 ```
 
 ### Image Pull Secrets
@@ -266,7 +284,7 @@ kubectl create secret docker-registry ecr-secret \
   --docker-password=$(aws ecr get-login-password) \
   -n fictions-app
 
-# Add to deployment.yaml:
+# Add to backend-deployment.yaml and frontend-deployment.yaml:
 spec:
   imagePullSecrets:
   - name: ecr-secret

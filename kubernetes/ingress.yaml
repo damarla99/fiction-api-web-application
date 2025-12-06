@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fictions-app-ingress
+  namespace: fictions-app
+  annotations:
+    # AWS Load Balancer Controller annotations
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    # Tags for AWS resources
+    alb.ingress.kubernetes.io/tags: Environment=development,Project=fictions-app
+spec:
+  ingressClassName: alb
+  rules:
+  - http:
+      paths:
+      # API routes - must come first for proper matching
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: fictions-api
+            port:
+              number: 3000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: fictions-api
+            port:
+              number: 3000
+      # Frontend routes - catch all remaining
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: fictions-frontend
+            port:
+              number: 80
+

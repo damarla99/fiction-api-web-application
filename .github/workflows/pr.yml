@@ -27,25 +27,25 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
           pip install pytest pytest-cov flake8 black
 
       - name: Lint with flake8
         run: |
           # Stop the build if there are Python syntax errors or undefined names
-          flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 backend/src --count --select=E9,F63,F7,F82 --show-source --statistics
           # Exit-zero treats all errors as warnings
-          flake8 src --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+          flake8 backend/src --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
       - name: Check code formatting
-        run: black --check src
+        run: black --check backend/src
 
       - name: Run tests
         run: |
@@ -80,10 +80,10 @@ jobs:
         run: safety check --json || true
 
       - name: Run bandit security linter
-        run: bandit -r src -f json || true
+        run: bandit -r backend/src -f json || true
 
-  docker:
-    name: Docker Build Test
+  docker-backend:
+    name: Backend Docker Build Test
     runs-on: ubuntu-latest
     
     steps:
@@ -93,20 +93,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build Backend Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
           push: false
-          tags: fictions-api:test
+          tags: fictions-api-backend:test
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner on Backend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'fictions-api:test'
+          image-ref: 'fictions-api-backend:test'
           format: 'table'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'  # Fail on critical/high vulnerabilities in PRs
@@ -115,18 +115,51 @@ jobs:
         uses: aquasecurity/trivy-action@master
         if: always()
         with:
-          image-ref: 'fictions-api:test'
+          image-ref: 'fictions-api-backend:test'
           format: 'sarif'
-          output: 'trivy-results.sarif'
+          output: 'trivy-backend-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: 'trivy-backend-results.sarif'
 
-      - name: Test Docker image
+      - name: Test Backend Docker image
         run: |
-          docker run --rm fictions-api:test python --version
+          docker run --rm fictions-api-backend:test python --version
+
+  docker-frontend:
+    name: Frontend Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: fictions-api-frontend:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner on Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'fictions-api-frontend:test'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail on frontend vulnerabilities (Node.js base image has many)
+
+      - name: Test Frontend Docker image
+        run: |
+          docker run --rm fictions-api-frontend:test nginx -v
 

@@ -8,9 +8,12 @@ resources:
   - configmap.yaml
   - secrets.yaml
   - mongodb.yaml
-  - deployment.yaml
-  - service.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
   - hpa.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - ingress.yaml
 
 # Optional: Add labels to all resources
 commonLabels:
