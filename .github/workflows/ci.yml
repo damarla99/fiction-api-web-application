@@ -74,7 +74,7 @@ jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, deploy-infra]  # Wait for Terraform to create ECR
     if: github.event.inputs.action != 'destroy'
     
     outputs:
@@ -94,16 +94,6 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Ensure ECR repository exists
-        run: |
-          aws ecr describe-repositories --repository-names fictions-api-development --region ${{ env.AWS_REGION }} || \
-          aws ecr create-repository \
-            --repository-name fictions-api-development \
-            --region ${{ env.AWS_REGION }} \
-            --image-scanning-configuration scanOnPush=true \
-            --encryption-configuration encryptionType=AES256 \
-            --tags Key=Project,Value=fictions-api Key=Environment,Value=development Key=ManagedBy,Value=github-actions
 
       - name: Extract metadata for Docker
         id: meta
