@@ -38,7 +38,7 @@ A full-stack containerized web application demonstrating modern DevOps practices
 - ✅ **Rate Limiting** (SlowAPI) to prevent abuse
 - ✅ **MongoDB** integration with async driver (Motor)
 - ✅ **Input Validation** with Pydantic models
-- ✅ **Auto-generated API Documentation** (Swagger UI + ReDoc)
+- ✅ **Auto-generated API Documentation** (Swagger UI)
 - ✅ **Health Check** endpoints for monitoring
 - ✅ **CORS** support for cross-origin requests
 
@@ -375,7 +375,6 @@ docker-compose ps
 Open your browser to:
 - **🌐 API:** http://localhost:3000
 - **📖 Swagger UI (Interactive Docs):** http://localhost:3000/api/docs
-- **📚 ReDoc (Alternative Docs):** http://localhost:3000/api/redoc
 
 **📖 Next:** See [Testing](#-testing) section for detailed testing instructions.
 
@@ -392,7 +391,6 @@ Open your browser to:
 |---------|-----|
 | API Base | http://localhost:3000 |
 | Swagger UI | http://localhost:3000/api/docs |
-| ReDoc | http://localhost:3000/api/redoc |
 | Health Check | http://localhost:3000/health |
 | MongoDB | localhost:27017 |
 
@@ -607,7 +605,6 @@ aws s3 rb s3://fictions-api-terraform-state-development --force
 |----------|--------|-------------|---------------|
 | `/health` | GET | Health check | No |
 | `/api/docs` | GET | Swagger UI documentation | No |
-| `/api/redoc` | GET | ReDoc documentation | No |
 | `/api/auth/register` | POST | Register new user | No |
 | `/api/auth/login` | POST | Login and get JWT token | No |
 | `/api/fictions/` | GET | List all fictions | Yes |
@@ -620,7 +617,8 @@ aws s3 rb s3://fictions-api-terraform-state-development --force
 
 When the API is running, visit:
 - **Swagger UI:** `http://localhost:3000/api/docs` (local) or `http://<LOAD_BALANCER_URL>/api/docs` (AWS)
-- **ReDoc:** `http://localhost:3000/api/redoc` (local) or `http://<LOAD_BALANCER_URL>/api/redoc` (AWS)
+  - Interactive API documentation with "Try it out" functionality
+  - Test all endpoints directly from your browser
 
 ### API Field Reference
 

@@ -52,7 +52,7 @@ app = FastAPI(
     version=settings.app_version,
     lifespan=lifespan,
     docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    redoc_url=None,  # Disabled - use Swagger UI instead
     openapi_url="/api/openapi.json",
 )
 
@@ -101,7 +101,7 @@ async def root():
     return {
         "message": f"Welcome to {settings.app_name}",
         "version": settings.app_version,
-        "docs": "/api/docs",
+        "documentation": "/api/docs",
         "health": "/health",
     }
 
