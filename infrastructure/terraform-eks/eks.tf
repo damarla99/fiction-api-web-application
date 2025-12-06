@@ -60,6 +60,19 @@ module "eks" {
   # Enable IRSA (IAM Roles for Service Accounts)
   enable_irsa = true
 
+  # Additional security group rules for worker nodes
+  node_security_group_additional_rules = {
+    # Allow inbound traffic from internet to NodePort range for NLB
+    ingress_nlb_nodeport = {
+      description = "Allow NLB traffic to Kubernetes NodePort range"
+      protocol    = "tcp"
+      from_port   = 30000
+      to_port     = 32767
+      type        = "ingress"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+
   tags = var.tags
 }
 
