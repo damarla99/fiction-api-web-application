@@ -285,9 +285,9 @@ jobs:
         id: terraform-output
         working-directory: infrastructure/terraform-eks
         run: |
-          CLUSTER_NAME=$(terraform output -raw cluster_name)
+          CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null || echo "fictions-api")
           echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
-          terraform output > outputs.txt
+          terraform output 2>/dev/null > outputs.txt || echo "No outputs available yet" > outputs.txt
 
       - name: Upload Terraform Outputs
         uses: actions/upload-artifact@v4
@@ -452,7 +452,7 @@ jobs:
         working-directory: infrastructure/terraform-eks
         run: |
           terraform init
-          CLUSTER_NAME=$(terraform output -raw cluster_name || echo "fictions-api-development")
+          CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null || echo "fictions-api")
           echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
 
       - name: Install kubectl
