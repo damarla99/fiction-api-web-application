@@ -93,22 +93,39 @@ kubectl apply -f kubernetes/
 
 ### Update Secrets
 
-**Before deploying, update `secrets.yaml`:**
+⚠️ **SECURITY WARNING**: `secrets.yaml` contains development secrets only!
 
-```yaml
-stringData:
-  JWT_SECRET: "your-secure-jwt-secret-here"
-  MONGODB_URI: "mongodb://mongodb-service:27017/fictions_db"
+**For secure secret management:**
+
+**Option 1: Use Helper Script (Recommended)**
+```bash
+# Generate and create secrets securely
+./ops-tools/create-k8s-secrets.sh
 ```
 
-**For production, use:**
+**Option 2: Create Manually (No Git Commit)**
 ```bash
-# Create secret from command line
+# Generate secure JWT secret and create secret
 kubectl create secret generic app-secrets \
   --from-literal=JWT_SECRET="$(openssl rand -hex 32)" \
   --from-literal=MONGODB_URI="mongodb://mongodb-service:27017/fictions_db" \
   -n fictions-app
 ```
+
+**Option 3: Use Template**
+```bash
+# Copy template and edit
+cp kubernetes/secrets.yaml.template kubernetes/secrets.yaml
+# Edit secrets.yaml with your values
+# Add secrets.yaml to .gitignore
+kubectl apply -f kubernetes/secrets.yaml
+```
+
+**For Production Environments:**
+- ✅ Use AWS Secrets Manager + External Secrets Operator
+- ✅ Use HashiCorp Vault
+- ✅ Use Sealed Secrets
+- ❌ NEVER commit actual secrets to Git
 
 ### Update Image URLs
 
@@ -292,12 +309,55 @@ spec:
 
 ---
 
+---
+
+## 🚀 Production Improvements
+
+### Parameterization & Configuration Management
+
+**Current State:**  
+Manifests have hardcoded values (image URLs, replica counts, resource limits).
+
+**Recommended Improvements:**
+
+**1. Use Kustomize (Built into kubectl)**
+```bash
+# Create base/ and overlays/dev, overlays/prod
+kustomize edit set image app=<your-image>
+kubectl apply -k overlays/prod/
+```
+
+**2. Use Helm Charts**
+```bash
+# Create values.yaml for parameterization
+helm install fictions-api ./helm-chart \
+  --values values-prod.yaml
+```
+
+**3. Use ConfigMaps for Non-Secret Configuration**
+```yaml
+# Move environment-specific values to configmap.yaml:
+# - API rate limits
+# - Feature flags
+# - External service URLs
+```
+
+**Benefits:**
+- ✅ Single manifest set for dev/staging/prod
+- ✅ Easy version upgrades
+- ✅ No hardcoded values
+- ✅ Environment-specific overrides
+- ✅ GitOps-friendly (ArgoCD, Flux)
+
+**Note:** This project uses plain manifests for simplicity. For production, consider Helm or Kustomize for better configuration management.
+
+---
+
 ## 🔗 Related Documentation
 
 - **Infrastructure (Terraform)**: `../infrastructure/terraform-eks/README.md`
-- **Developer Guide**: `../dev-tools/README_DEVELOPERS.md`
 - **DevOps Guide**: `../ops-tools/README_DEVOPS.md`
-- **API Documentation**: `../API_DOCUMENTATION.md`
+- **Main README**: `../README.md`
 
 ---
 

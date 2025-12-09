@@ -85,9 +85,9 @@ docker run -p 3000:3000 \
 | `/api/docs` | GET | Swagger UI | No |
 | `/api/auth/register` | POST | Register user | No |
 | `/api/auth/login` | POST | Login user | No |
-| `/api/fictions/` | GET | List fictions | Yes |
+| `/api/fictions/` | GET | List fictions | No (Public) |
 | `/api/fictions/` | POST | Create fiction | Yes |
-| `/api/fictions/{id}` | GET | Get fiction | Yes |
+| `/api/fictions/{id}` | GET | Get fiction | No (Public) |
 | `/api/fictions/{id}` | PUT | Update fiction | Yes |
 | `/api/fictions/{id}` | DELETE | Delete fiction | Yes |
 
